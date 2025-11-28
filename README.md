@@ -13,6 +13,128 @@ Client → Controller → Aggregator Service
    [CircuitBreaker] [CircuitBreaker]   [CircuitBreaker]
         ↓                  ↓                  ↓
     MongoDB            MongoDB            MongoDB
+
+```
+## Aggregator Service
+## Component Architecture - Spring Boot + Vert.x
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────┐
+│                          PRESENTATION LAYER (Controllers)                          │
+└────────────────────────────────────────────────────────────────────────────────────┘
+                                         │
+                                         │ HTTP GET /booking/{pnr}
+                                         ▼
+                        ┌──────────────────────────────────┐
+                        │   BookingController              │
+                        │   - @RestController              │
+                        │   - @Validated                   │
+                        ├──────────────────────────────────┤
+                        │ + getBooking(pnr): Future        │
+                        │ + handleValidationException()    │
+                        └──────────────────────────────────┘
+                                         │
+                                         │ Calls
+                                         ▼
+┌────────────────────────────────────────────────────────────────────────────────────┐
+│                           BUSINESS LOGIC LAYER (Services)                          │
+└────────────────────────────────────────────────────────────────────────────────────┘
+                                         │
+                        ┌────────────────┴──────────────┐
+                        │                               │
+                        ▼                               │
+        ┌───────────────────────────────────┐           │
+        │  BookingAggregatorService         │           │
+        │  - @Service                       │           │
+        ├───────────────────────────────────┤           │
+        │ - tripService                     │───────────┘
+        │ - baggageService                  │
+        │ - ticketService                   │
+        │ - vertx                           │
+        ├───────────────────────────────────┤
+        │ + aggregateBooking(pnr)           │
+        │   → CompositeFuture.all()         │
+        └───────────────────────────────────┘
+                        │
+        ┌───────────────┼───────────────┐
+        │               │               │
+        ▼               ▼               ▼
+┌─────────────┐ ┌───────────────┐ ┌──────────────┐
+│ TripService │ │BaggageService │ │TicketService │
+│             │ │               │ │              │
+│ - mongodb   │ │ - mongodb     │ │ - mongodb    │
+│ - redis     │ │ - breaker     │ │ - breaker    │
+│ - breaker   │ │               │ │              │
+├─────────────┤ ├───────────────┤ ├──────────────┤
+│ +getTripInfo│ │+getBaggageInfo│ │+getTicket()  │
+│ -fallback() │ │-fallback()    │ │.recover()    │
+└─────────────┘ └───────────────┘ └──────────────┘
+        │               │               │
+        └───────────────┼───────────────┘
+                        │
+                        │ Async Event Bus
+                        ▼
+        ┌───────────────────────────────┐
+        │   PnrEventConsumer            │
+        │   - @Component                │
+        ├───────────────────────────────┤
+        │ + consumePnrEvents()          │
+        │   → WebSocket broadcast       │
+        └───────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────────────────┐
+│                         CONFIGURATION LAYER (@Configuration)                       │
+└────────────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────┐ ┌──────────────┐ ┌───────────────┐ ┌──────────────┐
+│ VertxConfig  │ │ CacheConfig  │ │WebSocketConfig│ │  WebConfig   │
+│              │ │              │ │               │ │              │
+│ @Bean Vertx  │ │@Bean Redis   │ │@Bean STOMP    │ │@Bean CORS    │
+│ @Bean Mongo  │ │ CacheManager │ │ MessageBroker │ │ AsyncSupport │
+│ @Bean CB's   │ │              │ │               │ │              │
+└──────────────┘ └──────────────┘ └───────────────┘ └──────────────┘
+
+┌──────────────────┐ ┌──────────────────────┐
+│MongoDbProperties │ │CircuitBreakerLogger  │
+│@ConfigProperties │ │ Monitors CB states   │
+└──────────────────┘ └──────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────────────────┐
+│                            DATA LAYER (Models)                                     │
+└────────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────┐     ┌────────────────────────────────┐
+│      ENTITIES (MongoDB)         │     │       DTOs (API Response)      │
+├─────────────────────────────────┤     ├────────────────────────────────┤
+│ • Trip                          │     │ • BookingResponse              │
+│ • Passenger (embedded)          │───▶│ • PassengerDTO                 │
+│ • Flight (embedded)             │     │ • FlightDTO                    │
+│ • Baggage                       │     │                                │
+│ • Ticket                        │     │ Separates internal/external    │
+│ • BaggageAllowance              │     │ data models                    │
+└─────────────────────────────────┘     └────────────────────────────────┘
+
+┌─────────────────────────────────┐
+│       EXCEPTIONS                │
+├─────────────────────────────────┤
+│ • PNRNotFoundException (404)    │
+│ • ServiceUnavailableException   │
+│   (503 - Circuit Breaker Open)  │
+└─────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────────────────┐
+│                         INFRASTRUCTURE (External)                                  │
+└────────────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│   MongoDB    │  │  Redis Cache │  │  Vert.x      │  │  WebSocket   │
+│              │  │              │  │  Event Bus   │  │  Clients     │
+│ Collections: │  │ TTL: 5min    │  │              │  │              │
+│ - trips      │  │ Pattern:     │  │ Address:     │  │ /ws/pnr      │
+│ - baggage    │  │   trip:{pnr} │  │   pnr.events │  │              │
+│ - tickets    │  │              │  │              │  │              │
+└──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘
+
 ```
 ## Features
 
