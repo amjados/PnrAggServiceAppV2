@@ -69,3 +69,6 @@ temp/
 *.tmp
 *.bak
 *.swp
+
+# Documentation (out-readme)
+docs/out-readme/DEVELOPMENT-GUIDE.md
