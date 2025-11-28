@@ -18,46 +18,49 @@ import java.util.stream.Collectors;
 
 /**
  * @Service: Marks this class as a Spring service component
- * - Indicates this class contains business logic
- * - Makes it a candidate for component scanning and dependency injection
- * - Registered as a bean in the Spring application context
- * - Can be autowired into other components (like controllers)
+ *           - Indicates this class contains business logic
+ *           - Makes it a candidate for component scanning and dependency
+ *           injection
+ *           - Registered as a bean in the Spring application context
+ *           - Can be autowired into other components (like controllers)
  */
 @Service
 /**
  * @Slf4j: Lombok annotation that generates a SLF4J Logger field
- * - Auto-creates: private static final Logger log = LoggerFactory.getLogger(BookingAggregatorService.class)
- * - Enables logging with log.info(), log.error(), log.debug() without manual logger creation
+ *         - Auto-creates: private static final Logger log =
+ *         LoggerFactory.getLogger(BookingAggregatorService.class)
+ *         - Enables logging with log.info(), log.error(), log.debug() without
+ *         manual logger creation
  */
 @Slf4j
 public class BookingAggregatorService {
 
     /**
      * @Autowired: Dependency injection for TripService
-     * - Spring automatically injects the TripService bean instance
-     * - No manual instantiation needed
+     *             - Spring automatically injects the TripService bean instance
+     *             - No manual instantiation needed
      */
     @Autowired
     private TripService tripService;
 
     /**
      * @Autowired: Dependency injection for BaggageService
-     * - Spring automatically injects the BaggageService bean instance
+     *             - Spring automatically injects the BaggageService bean instance
      */
     @Autowired
     private BaggageService baggageService;
 
     /**
      * @Autowired: Dependency injection for TicketService
-     * - Spring automatically injects the TicketService bean instance
+     *             - Spring automatically injects the TicketService bean instance
      */
     @Autowired
     private TicketService ticketService;
 
     /**
      * @Autowired: Dependency injection for Vert.x instance
-     * - Vert.x is configured in VertxConfig and injected here
-     * - Used for event bus communication and async operations
+     *             - Vert.x is configured in VertxConfig and injected here
+     *             - Used for event bus communication and async operations
      */
     @Autowired
     private Vertx vertx;
@@ -82,6 +85,7 @@ public class BookingAggregatorService {
                             .collect(Collectors.toList());
 
                     // Wait for all parallel operations
+                    // CompositeFuture.all()
                     return Future.all(baggageFuture, Future.all(ticketFutures))
                             .map(cf -> {
                                 BookingResponse response = mergeData(trip, baggageFuture.result(), ticketFutures);

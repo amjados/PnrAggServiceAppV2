@@ -104,14 +104,14 @@ Client → Controller → Aggregator Service
 └────────────────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────┐     ┌────────────────────────────────┐
-│      ENTITIES (MongoDB)         │     │       DTOs (API Response)      │
+│   ENTITIES (MongoDB Collections)│     │       DTOs (API Response)      │
 ├─────────────────────────────────┤     ├────────────────────────────────┤
-│ • Trip                          │     │ • BookingResponse              │
-│ • Passenger (embedded)          │───▶│ • PassengerDTO                 │
-│ • Flight (embedded)             │     │ • FlightDTO                    │
-│ • Baggage                       │     │                                │
-│ • Ticket                        │     │ Separates internal/external    │
-│ • BaggageAllowance              │     │ data models                    │
+│ • trips (collection)            │     │ • BookingResponse              │
+│   - passengers[] (embedded)     │───▶│ • PassengerDTO                 │
+│   - flights[] (embedded)        │     │ • FlightDTO                    │
+│ • baggage (collection)          │     │                                │
+│   - baggageAllowances[] (embed) │     │ Separates internal/external    │
+│ • tickets (collection)          │     │ data models                    │
 └─────────────────────────────────┘     └────────────────────────────────┘
 
 ┌─────────────────────────────────┐
