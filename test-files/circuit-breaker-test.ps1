@@ -10,7 +10,6 @@
 #   -BaseUrl : Service endpoint URL (default: http://localhost:8080)
 #   -PNR     : Passenger Name Record to test (default: GHTW42)
 #
-# Test Duration: ~2-3 minutes
 # Prerequisites: Docker, docker-compose, service running
 #
 # Documentation: See md-files/CIRCUIT_BREAKER_TEST_README.md
