@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>PNR WebSocket Connection Lifecycle</title>
+    <link rel="stylesheet" href="css_common.css">
+    <script type="module">
+        import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>
+    <script src="js_common.js" defer></script>
+</head>
+
+<body>
+    <div class="container">
+
+        <h2>Sequence Diagram: WebSocket Connection Lifecycle</h2>
+
+        <p>Shows complete WebSocket connection establishment process from browser client clicking "Connect" button to
+            successful connection with session registration and EventBus subscription. This connection remains active to
+            receive real-time notifications.</p>
+
+        <iframe src="pnr_uml_seq_dig_WebSocket_connect_diagram.html"
+            style="width: 100%; height: 800px; border: 1px solid #ddd; border-radius: 8px; background: #fafafa;">
+        </iframe>
+
+        <div class="note">
+            <strong>Architecture Pattern:</strong> Spring WebSocket with custom handler extending TextWebSocketHandler.
+            Uses ConcurrentHashMap for thread-safe session storage. EventBus subscription initialized once on handler
+            construction, receives all published events for broadcasting.
+        </div>
+
+        <div class="summary">
+            <h3>Key Points</h3>
+            <ul>
+                <li><strong>WebSocket Handshake:</strong> Upgrades HTTP connection to WebSocket protocol (101 status)
+                </li>
+                <li><strong>Session Management:</strong> Each connection stored in thread-safe ConcurrentHashMap</li>
+                <li><strong>Handler Lifecycle:</strong> PNRWebSocketHandler initialized once with @PostConstruct</li>
+                <li><strong>EventBus Subscription:</strong> Single consumer registered for "pnr.fetched" address</li>
+                <li><strong>Connection Persistence:</strong> WebSocket connection remains open for bidirectional
+                    communication</li>
+                <li><strong>Multiple Clients:</strong> Handler supports multiple simultaneous WebSocket connections</li>
+            </ul>
+        </div>
+
+        <div class="summary">
+            <h3>Connection Process</h3>
+            <ul>
+                <li><strong>Step 1:</strong> User clicks "Connect" button in websocket-test.html</li>
+                <li><strong>Step 2:</strong> JavaScript creates new WebSocket("ws://localhost:8080/ws/pnr")</li>
+                <li><strong>Step 3:</strong> Browser sends HTTP Upgrade request to server</li>
+                <li><strong>Step 4:</strong> Spring WebSocket accepts and upgrades connection</li>
+                <li><strong>Step 5:</strong> Handler.afterConnectionEstablished() adds session to map</li>
+                <li><strong>Step 6:</strong> Server responds with 101 Switching Protocols</li>
+                <li><strong>Step 7:</strong> Client receives ws.onopen() event confirmation</li>
+                <li><strong>Step 8:</strong> Connection ready to receive messages from EventBus</li>
+            </ul>
+        </div>
+
+        <div class="summary">
+            <h3>WebSocket Configuration</h3>
+            <ul>
+                <li><strong>Endpoint:</strong> ws://localhost:8080/ws/pnr</li>
+                <li><strong>Protocol:</strong> WebSocket (RFC 6455)</li>
+                <li><strong>CORS:</strong> Configured to allow all origins with setAllowedOrigins("*")</li>
+                <li><strong>Handler:</strong> PNRWebSocketHandler component manages connections</li>
+                <li><strong>Session Storage:</strong> ConcurrentHashMap.newKeySet() for thread safety</li>
+                <li><strong>Message Type:</strong> TextWebSocketHandler for JSON text messages</li>
+            </ul>
+        </div>
+
+    </div>
+</body>
+
+</html>

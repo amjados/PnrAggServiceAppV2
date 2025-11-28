@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PNR WebSocket Test Client</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1400px;
+            margin: 5px auto;
+            padding: 2px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            background: white;
+            padding: 5px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .split-container {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+
+        .left-panel,
+        .right-panel {
+            flex: 1;
+        }
+
+        h1 {
+            color: #333;
+            margin-top: 0;
+        }
+
+        .controls {
+            margin: 5px 0;
+        }
+
+        input {
+            width: 100%;
+            padding: 5px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        button {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 5px 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 5px;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background: #005a9e;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .status {
+            padding: 5px;
+            margin: 5px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .connected {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .messages {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 5px;
+            height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .message {
+            margin: 5px 0;
+            padding: 5px;
+            background: white;
+            border-left: 3px solid #007acc;
+            border-radius: 3px;
+        }
+
+        .message.error {
+            border-left-color: #dc3545;
+            background: #fff5f5;
+        }
+
+        .timestamp {
+            color: #666;
+            font-size: 11px;
+        }
+
+        .instructions {
+            background: #e7f3ff;
+            padding: 5px;
+            border-radius: 4px;
+            margin: 5px 0;
+            border-left: 4px solid #007acc;
+        }
+
+        .instructions h3 {
+            margin-top: 0;
+            color: #007acc;
+        }
+
+        .api-controls {
+            margin: 5px 0;
+            padding: 5px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .result-box {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 5px;
+            margin-top: 5px;
+            min-height: 500px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🔌 PNR WebSocket Test Client</h1>
+
+        <div class="split-container">
+            <div class="left-panel">
+                <div class="api-controls">
+                    <h3>Test API Request:</h3>
+                    <label>API URL:</label>
+                    <input type="text" id="apiUrl" value="http://localhost:8080/booking/GHTW42"
+                        placeholder="Enter full API URL" />
+                    <button onclick="fetchBooking()">Fetch Booking</button>
+                    <div id="apiResult" class="result-box"></div>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="controls">
+                    <h3>WebSocket Connection:</h3>
+                    <label>WebSocket URL:</label>
+                    <input type="text" id="wsUrl" value="ws://localhost:8080/ws/pnr" />
+
+                    <div style="margin-top: 15px;">
+                        <button id="connectBtn" onclick="connect()">Connect</button>
+                        <button id="disconnectBtn" onclick="disconnect()" disabled>Disconnect</button>
+                        <button onclick="clearMessages()">Clear Messages</button>
+                    </div>
+                </div>
+
+                <div id="status" class="status disconnected">Disconnected</div>
+
+                <h3>Messages:</h3>
+                <div id="messages" class="messages"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+
+        async function fetchBooking() {
+            const apiUrl = document.getElementById('apiUrl').value.trim();
+            const resultBox = document.getElementById('apiResult');
+
+            if (!apiUrl) {
+                resultBox.textContent = 'Please enter an API URL';
+                return;
+            }
+
+            resultBox.textContent = 'Fetching booking data...';
+
+            try {
+                const response = await fetch(apiUrl);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                resultBox.textContent = JSON.stringify(data, null, 2);
+
+                // Also log to WebSocket messages if connected
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    addMessage('📋 API Response received from: ' + apiUrl, 'success');
+                }
+            } catch (error) {
+                resultBox.textContent = `Error: ${error.message}`;
+                addMessage('❌ API request failed: ' + error.message, 'error');
+            }
+        }
+
+        function connect() {
+            const url = document.getElementById('wsUrl').value;
+
+            try {
+                addMessage('Connecting to ' + url + '...', 'info');
+                ws = new WebSocket(url);
+
+                ws.onopen = function () {
+                    addMessage('✓ Connected successfully!', 'success');
+                    updateStatus(true);
+                };
+
+                ws.onmessage = function (event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        addMessage('📨 Received: ' + JSON.stringify(data, null, 2), 'message');
+                    } catch (e) {
+                        addMessage('📨 Received: ' + event.data, 'message');
+                    }
+                };
+
+                ws.onerror = function (error) {
+                    addMessage('❌ WebSocket error occurred', 'error');
+                    console.error('WebSocket error:', error);
+                };
+
+                ws.onclose = function () {
+                    addMessage('Connection closed', 'info');
+                    updateStatus(false);
+                };
+
+            } catch (error) {
+                addMessage('❌ Failed to connect: ' + error.message, 'error');
+            }
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+                addMessage('Disconnected by user', 'info');
+            }
+        }
+
+        function updateStatus(connected) {
+            const statusDiv = document.getElementById('status');
+            const connectBtn = document.getElementById('connectBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+
+            if (connected) {
+                statusDiv.textContent = 'Connected ✓';
+                statusDiv.className = 'status connected';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+            } else {
+                statusDiv.textContent = 'Disconnected';
+                statusDiv.className = 'status disconnected';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+            }
+        }
+
+        function addMessage(text, type) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message' + (type === 'error' ? ' error' : '');
+
+            const timestamp = new Date().toLocaleTimeString();
+            messageDiv.innerHTML = `<span class="timestamp">[${timestamp}]</span><br/>${text}`;
+
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function clearMessages() {
+            document.getElementById('messages').innerHTML = '';
+            addMessage('Messages cleared', 'info');
+        }
+    </script>
+</body>
+
+</html>

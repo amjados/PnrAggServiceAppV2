@@ -1,0 +1,139 @@
+# =============================================================================
+# PNR Aggregator Service Configuration
+# =============================================================================
+# DOCKER DEPLOYMENT: Override using environment variables:
+#   MONGODB_HOST, MONGODB_PORT, REDIS_HOST, REDIS_PORT, SERVER_PORT
+# =============================================================================
+
+spring:
+  application:
+    name: pnr-aggregator
+  
+  # Cache Configuration
+  cache:
+    type: redis
+    redis:
+      time-to-live: 600000  # 10 minutes in milliseconds
+  
+  # Redis Configuration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 5000ms
+      jedis:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
+    # MongoDB Configuration
+    mongodb:
+      host: ${MONGODB_HOST:localhost}
+      port: ${MONGODB_PORT:27017}
+      database: ${MONGODB_DATABASE:pnr_db}
+
+server:
+  port: ${SERVER_PORT:8080}
+
+# =============================================================================
+# Resilience4j Circuit Breaker Configuration
+# =============================================================================
+# Circuit Breaker Pattern: Prevents cascading failures by stopping requests
+# to failing services and allowing them time to recover.
+#
+# States:
+#   CLOSED: Normal operation, requests pass through
+#   OPEN: Too many failures, requests blocked immediately
+#   HALF_OPEN: Testing if service recovered, limited requests allowed
+# =============================================================================
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        # Expose circuit breaker metrics via /actuator/health
+        registerHealthIndicator: true
+        
+        # Sliding Window Configuration
+        slidingWindowSize: 100  # Tracks last 100 calls to calculate failure rate
+        minimumNumberOfCalls: 10  # Need 10 calls before calculating failure rate
+        
+        # State Transition Configuration
+        permittedNumberOfCallsInHalfOpenState: 3  # Test with 3 calls in HALF_OPEN state
+        automaticTransitionFromOpenToHalfOpenEnabled: true  # Auto-transition to HALF_OPEN
+        waitDurationInOpenState: 10s  # Wait 60s in OPEN state before trying HALF_OPEN
+        
+        # Failure Threshold
+        failureRateThreshold: 10  # Open circuit if 10% of calls fail
+        
+        # Event Buffer
+        eventConsumerBufferSize: 10  # Store last 10 events for monitoring
+        
+        # Exception Handling
+        recordExceptions:  # These exceptions count as failures
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+          - io.vertx.core.VertxException
+          - com.mongodb.MongoException
+          - java.lang.RuntimeException
+        ignoreExceptions:  # These exceptions don't trigger circuit breaker
+          - com.pnr.aggregator.exception.PNRNotFoundException
+    
+    # Circuit Breaker Instances
+    instances:
+      tripServiceCB:  # Circuit breaker for Trip Service calls
+        baseConfig: default
+      baggageServiceCB:  # Circuit breaker for Baggage Service calls
+        baseConfig: default
+      ticketServiceCB:  # Circuit breaker for Ticket Service calls
+        baseConfig: default
+
+# =============================================================================
+# Spring Boot Actuator Configuration
+# =============================================================================
+# Actuator provides production-ready features for monitoring and managing
+# the application via HTTP endpoints.
+#
+# Exposed Endpoints:
+#   /actuator/health - Application health status and details
+#   /actuator/metrics - Application metrics (JVM, HTTP, custom)
+#   /actuator/circuitbreakers - Circuit breaker states and statistics
+#   /actuator/circuitbreakerevents - Recent circuit breaker events
+# =============================================================================
+management:
+  endpoints:
+    web:
+      exposure:
+        # Expose specific endpoints (security best practice)
+        # WHY: Only expose what's needed; 'health' is safe, others may leak sensitive info
+        include: health,metrics,circuitbreakers,circuitbreakerevents
+  endpoint:
+    health:
+      # Show full health details (DB connections, circuit breaker states, etc.)
+      # WHY: Helps diagnose issues in development; consider 'when-authorized' in production
+      show-details: always
+  health:
+    circuitbreakers:
+      # Enable circuit breaker health indicators
+      # WHY: Allows monitoring circuit breaker states via /actuator/health
+      enabled: true
+
+# =============================================================================
+# Logging Configuration
+# =============================================================================
+logging:
+  pattern:
+    console: "%d{dd HH:mm:ss.SSS} %-5level %logger{0} - %msg%n"
+    # Alternative patterns:
+    # Abbreviated: "%d{dd HH:mm:ss.SSS} %-5level %logger{36} - %msg%n"
+    # Simple: "%d{HH:mm:ss.SSS} %-5level %logger{36} - %msg%n"
+    # With colors: "%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr([%thread]){magenta} %clr(%-5level){blue} %clr(%logger{36}){cyan} %clr(-){faint} %msg%n"
+    # Detailed: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36}.%M\\(%line\\) - %msg%n"
+  level:
+    root: INFO
+    '[com.pnr.aggregator]': DEBUG
+    '[io.vertx]': ERROR
+    '[io.github.resilience4j]': DEBUG
+    '[io.github.resilience4j.spring.utils]': ERROR  # Suppress RxJava/Reactor classpath condition checks
+    '[org.mongodb.driver]': ERROR
+    '[org.springframework]': ERROR

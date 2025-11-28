@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 
+        Spring Boot Parent POM - v3.4.0 (Latest stable, Java 21 support)
+        Inherits managed dependency versions, plugins, and configurations
+    -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.4.0</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.pnr</groupId>
+    <artifactId>pnr-aggregator</artifactId>
+    <version>1.0.0</version>
+    <name>PNR Aggregator Service</name>
+    <description>PNR Aggregator with Circuit Breaker</description>
+
+    <!-- 
+        Version Properties
+        java: 21 LTS
+        vertx: 4.4.9 - COMPATIBILITY NOTE: Downgraded for MongoDB 4.11.x (has StreamFactoryFactory)
+        resilience4j: 2.1.0 - COMPATIBILITY NOTE: Spring Boot 3.x compatible
+    -->
+    <properties>
+        <java.version>21</java.version>
+        <vertx.version>4.4.9</vertx.version>
+        <resilience4j.version>2.1.0</resilience4j.version>
+    </properties>
+
+    <dependencies>
+        <!-- Spring Boot Web Starter - REST API endpoints with embedded Tomcat -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- 
+            Vert.x Core - v4.4.9
+            Non-blocking reactive framework for async MongoDB operations
+            COMPATIBILITY NOTE: Locked to work with MongoDB driver 4.11.x
+        -->
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-core</artifactId>
+            <version>${vertx.version}</version>
+        </dependency>
+
+        <!-- 
+            Vert.x MongoDB Client - v4.4.9
+            Reactive MongoDB driver returning Futures for parallel operations
+            COMPATIBILITY NOTE: Requires MongoDB 4.x driver (needs StreamFactoryFactory class)
+        -->
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-mongo-client</artifactId>
+            <version>${vertx.version}</version>
+        </dependency>
+
+        <!-- 
+            MongoDB Reactive Streams Driver - v4.11.4 (CRITICAL OVERRIDE)
+            Spring Boot 3.4.0 uses MongoDB 5.x (removed StreamFactoryFactory)
+            Explicitly set 4.11.4 for Vert.x 4.4.9 compatibility
+            COMPATIBILITY NOTE: Must stay on 4.x until Vert.x supports MongoDB 5.x driver
+        -->
+        <dependency>
+            <groupId>org.mongodb</groupId>
+            <artifactId>mongodb-driver-reactivestreams</artifactId>
+            <version>4.11.4</version>
+        </dependency>
+
+        <!-- 
+            MongoDB Driver Core - v4.11.4
+            COMPATIBILITY NOTE: Must match reactivestreams driver version (4.11.4)
+        -->
+        <dependency>
+            <groupId>org.mongodb</groupId>
+            <artifactId>mongodb-driver-core</artifactId>
+            <version>4.11.4</version>
+        </dependency>
+
+        <!-- 
+            Resilience4j Circuit Breaker - v2.1.0
+            Prevents cascading failures with fallback methods
+            COMPATIBILITY NOTE: Version 2.x for Spring Boot 3.x (1.x for Boot 2.x)
+        -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-spring-boot3</artifactId>
+            <version>${resilience4j.version}</version>
+        </dependency>
+
+        <!-- Spring Boot Actuator - Monitoring and health endpoints -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- Spring Cache - @Cacheable support for circuit breaker fallback -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-cache</artifactId>
+        </dependency>
+
+        <!-- Spring Data Redis - Distributed cache for fallback data (10-min TTL) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
+        <!-- Lombok - Compile-time code generation (@Data, @Slf4j) -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- 
+            SpringDoc OpenAPI - v2.2.0
+            Auto-generates Swagger UI and OpenAPI spec
+            COMPATIBILITY NOTE: Version 2.x for Spring Boot 3.x (Jakarta namespace)
+        -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.2.0</version>
+        </dependency>
+
+        <!-- Spring Validation - Bean Validation (JSR-380) for input validation -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- Spring WebSocket - Real-time bidirectional communication -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
+
+        <!-- Spring Boot Test - JUnit, Mockito, AssertJ -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- 
+                Spring Boot Maven Plugin
+                Creates executable JAR with embedded server, excludes Lombok (compile-time only)
+            -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

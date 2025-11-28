@@ -1,0 +1,89 @@
+# =============================================================================
+# Dockerfile for PNR Aggregator Service (From Pre-Built JAR)
+# =============================================================================
+# This Dockerfile uses a pre-built JAR file instead of building from source.
+# WHY: Faster Docker builds when you already have the JAR; ideal for CI/CD
+#      where build and containerization are separate steps.
+#
+# PREREQUISITES:
+#   Build the JAR first: mvn clean package -DskipTests
+#   This creates: target/pnr-aggregator-1.0.0.jar
+# =============================================================================
+
+# Use smaller JRE-only image for runtime (not full JDK)
+# WHY: JRE is ~100MB smaller than JDK; we don't need javac in production
+FROM eclipse-temurin:21-jre-alpine
+
+# Set working directory
+# WHY: Provides consistent path for application files and working directory for the app
+WORKDIR /app
+
+# Create non-root user for security
+# WHY: Don't run application as root (security best practice)
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+# Copy the pre-built JAR from your machine's target directory
+# WHY: Uses existing JAR; skips Maven build in Docker for faster deployment
+COPY target/pnr-aggregator-1.0.0.jar app.jar
+
+# Install curl for health checks
+# WHY: Needed for Docker health check and debugging
+RUN apk add --no-cache curl
+
+# Change ownership to non-root user
+# WHY: Ensures appuser can read/write files; prevents permission errors at runtime
+RUN chown -R appuser:appgroup /app
+
+# Switch to non-root user
+# WHY: Security best practice; limits damage if container is compromised
+USER appuser
+
+# Expose application port
+# WHY: Documents which port the app listens on (doesn't actually publish)
+EXPOSE 8080
+
+# Health check
+# WHY: Docker can monitor if app is responding (not just running)
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=40s \
+    CMD curl -f http://localhost:8080/actuator/health || exit 1
+
+# Set JVM options for containerized environment
+# WHY: Container-specific optimizations for memory and GC
+ENV JAVA_OPTS="-Xmx512m -Xms256m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseContainerSupport"
+
+# Run the application
+# WHY: exec form ensures proper signal handling (SIGTERM for graceful shutdown)
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+
+# =============================================================================
+# BUILD INSTRUCTIONS
+# =============================================================================
+# Step 1: Build JAR locally (outside Docker):
+#   mvn clean package -DskipTests
+#
+# Step 2: Build Docker image:
+#   docker build -f DockerfileFromJar -t pnr-aggregator:latest .
+#
+# Step 3: Run container:
+#   docker run -p 8080:8080 \
+#     -e MONGODB_HOST=mongodb \
+#     -e REDIS_HOST=redis \
+#     pnr-aggregator:latest
+#
+# Using with docker-compose:
+#   Modify docker-compose.yml:
+#     build:
+#       context: .
+#       dockerfile: DockerfileFromJar
+#
+# ADVANTAGES:
+#   - Much faster builds (no Maven downloads in Docker)
+#   - Smaller image (~200MB vs ~500MB during build)
+#   - Better for CI/CD pipelines (separate build/deploy stages)
+#   - Docker layer caching is simpler
+#
+# DISADVANTAGES:
+#   - Requires JAR to be built before Docker
+#   - JAR must be in target/ directory
+#   - Not self-contained (needs local Maven/Java installed)
+# =============================================================================

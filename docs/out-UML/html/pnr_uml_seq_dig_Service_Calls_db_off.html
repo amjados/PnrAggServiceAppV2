@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>PNR Service Calls - Database Offline</title>
+    <link rel="stylesheet" href="css_common.css">
+    <script type="module">
+        import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>
+    <script src="js_common.js" defer></script>
+</head>
+
+<body>
+    <div class="container">
+
+        <h2>Sequence Diagram: Service Calls with Database Offline (Circuit Breaker Open)</h2>
+
+        <p>Request flow when end user requests <code>http://localhost:8080/booking/GHTW42</code> with MongoDB offline.
+            Shows Circuit Breaker opening after threshold reached, fallback to cached data, degraded response, and
+            WebSocket notification of service degradation.</p>
+
+        <iframe src="pnr_uml_seq_dig_Service_Calls_db_off_diagram.html"
+            style="width: 100%; height: 800px; border: 1px solid #ddd; border-radius: 8px; background: #fafafa;">
+        </iframe>
+
+        <div class="note">
+            <strong>Architecture Pattern:</strong> Circuit Breaker pattern with Redis cache fallback. When MongoDB
+            fails,
+            circuit breaker opens and fallback method serves cached data. System degrades gracefully maintaining
+            availability.
+        </div>
+
+        <div class="summary">
+            <h3>Key Points</h3>
+            <ul>
+                <li><strong>Circuit Breaker Protection:</strong> Prevents repeated calls to failing MongoDB service</li>
+                <li><strong>Failure Threshold:</strong> Circuit opens after 5 consecutive failures within sliding window
+                </li>
+                <li><strong>Fallback Strategy:</strong> Returns cached data from Redis when primary source fails</li>
+                <li><strong>Graceful Degradation:</strong> System continues operating with partial/cached data</li>
+                <li><strong>Metadata Tracking:</strong> Response includes fromCache flag and fallback messages</li>
+                <li><strong>Auto-Recovery:</strong> Circuit moves to HALF_OPEN after 60 seconds to test recovery</li>
+                <li><strong>Real-Time Alert:</strong> WebSocket clients notified immediately of degraded service</li>
+            </ul>
+        </div>
+
+        <div class="summary">
+            <h3 class="cons">Failure Scenario</h3>
+            <ul>
+                <li><strong>Database Unavailable:</strong> MongoDB connection timeout or service down</li>
+                <li><strong>Circuit Breaker Opens:</strong> After 5 failures, circuit breaker opens for 60 seconds</li>
+                <li><strong>Fallback Activated:</strong> getTripFallback() returns cached data from Redis</li>
+                <li><strong>Degraded Response:</strong> HTTP 200 OK with status DEGRADED and cached data</li>
+                <li><strong>Cache Age:</strong> Data may be stale (up to 5 minutes old based on TTL)</li>
+                <li><strong>Partial Data:</strong> May not include recent updates or changes</li>
+                <li><strong>Recovery Testing:</strong> After wait duration, circuit allows one test request</li>
+            </ul>
+        </div>
+
+        <div class="summary">
+            <h3>Circuit Breaker States</h3>
+            <ul>
+                <li><strong>CLOSED:</strong> Normal operation, requests pass through, failures counted</li>
+                <li><strong>OPEN:</strong> Circuit breaker active, requests blocked, fallback invoked immediately</li>
+                <li><strong>HALF_OPEN:</strong> Testing phase, allows limited requests to test if service recovered</li>
+            </ul>
+        </div>
+
+    </div>
+</body>
+
+</html>

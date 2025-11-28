@@ -1,0 +1,337 @@
+#version: '3.8'
+
+# Project name shown in Docker Desktop
+name: pnr-aggregator-project
+
+# =============================================================================
+# PNR Aggregator - Docker Compose Configuration
+# =============================================================================
+#
+# SUMMARY:
+#   Complete containerized deployment of PNR Aggregator microservice with
+#   MongoDB database, Redis cache, and Swagger UI documentation interface.
+#
+# ARCHITECTURE:
+#   4 Services: pnr-aggregator (Spring Boot), mongodb, redis, swagger-ui
+#   Startup Order: MongoDB & Redis → PNR Aggregator → Swagger UI
+#   Network: Isolated bridge network for inter-service communication
+#   Storage: Persistent volumes for MongoDB data and Redis AOF
+#
+# FEATURES:
+#   PHASE 1: Multi-stage Docker build + Environment variables
+#   PHASE 2: Resource limits (CPU/Memory) on all services
+#   PHASE 3: Swagger UI for interactive API documentation
+#   Health checks with proper startup dependencies
+#   Automatic database seeding with sample PNR data
+#   CORS configuration for Swagger UI integration
+#
+# QUICK START:
+#   docker-compose up -d              # Start all services
+#   docker-compose logs -f            # View logs
+#   docker-compose down               # Stop all services
+#   docker-compose down -v            # Stop and remove volumes (reset)
+#
+# ACCESS POINTS:
+#   http://localhost:8080/booking/{pnr}           # PNR API
+#   http://localhost:8080/actuator/health         # Health check
+#   http://localhost:8080/actuator/circuitbreakers # Circuit breaker status
+#   http://localhost:8081                         # Swagger UI
+#
+# SAMPLE DATA (Pre-loaded):
+#   PNR: GHTW42 (Economy, 2 passengers, DXB→IAD)
+#   PNR: ABC123 (Business, 1 passenger, LHR→JFK)
+#
+# =============================================================================
+
+services:
+  # ===========================================================================
+  # PNR Aggregator Application (Spring Boot + Vert.x)
+  # ===========================================================================
+  pnr-aggregator:
+    # Build from local Dockerfile (multi-stage: Maven build → JRE runtime)
+    # WHY: Custom build allows optimized layering and dependency caching
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pnr-aggregator-app
+    ports:
+      - "8080:8080"
+      # WHY: Maps container port 8080 to host port 8080 for API access
+    environment:
+      # MongoDB connection (using Docker service name for internal DNS resolution)
+      MONGODB_HOST: pnr-mongodb
+      MONGODB_PORT: 27017
+      MONGODB_DATABASE: pnr_db
+      # Redis connection (using Docker service name for internal DNS resolution)
+      REDIS_HOST: pnr-redis
+      REDIS_PORT: 6379
+      # Server configuration
+      SERVER_PORT: 8080
+      # JVM tuning: 512M max heap, 256M initial, G1 garbage collector
+      # WHY: Optimizes memory usage and GC performance in containerized environment
+      JAVA_OPTS: "-Xmx512m -Xms256m -XX:+UseG1GC"
+    depends_on:
+      # Wait for dependencies to be healthy before starting
+      # WHY: Prevents startup errors from connecting to unavailable services
+      mongodb:
+        condition: service_healthy # MongoDB health check must pass
+      redis:
+        condition: service_healthy # Redis health check must pass
+    # STARTUP ORDER: MongoDB & Redis (parallel) → PNR Aggregator → Swagger UI
+    networks:
+      - pnr-network # Connects to isolated bridge network for service discovery
+    healthcheck:
+      # Curl actuator endpoint to verify app is ready to serve traffic
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/actuator/health" ]
+      interval: 30s # Check every 30 seconds
+      timeout: 10s # Fail if check takes longer than 10s
+      retries: 3 # Mark unhealthy after 3 consecutive failures
+      start_period: 60s # Give app 60s to start before health checks count
+      # WHY start_period: Spring Boot initialization can take 30-60s on first start
+    restart: unless-stopped # Auto-restart on failure (except manual stop)
+    # Resource Limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0' # Max 1 CPU core
+          memory: 768M # Max 768MB RAM
+        reservations:
+          cpus: '0.5' # Reserve 0.5 CPU core
+          memory: 512M # Reserve 512MB RAM
+    # WHY: Prevents app from consuming all host resources
+    # Memory: 768M limit accounts for 512M heap + overhead
+    # CPU: 1.0 limit prevents CPU starvation of other services
+
+    # ===========================================================================
+    # MongoDB Database
+    # ===========================================================================
+  mongodb:
+    image: mongo:7.0
+    # WHY: Official MongoDB 7.0 provides stable, production-ready database
+    container_name: pnr-mongodb
+    ports:
+      - "27017:27017"
+      # WHY: Exposes MongoDB port for external tools (MongoDB Compass, CLI)
+    environment:
+      MONGO_INITDB_DATABASE: pnr_db
+      # WHY: Auto-creates database on first startup; init scripts run in this DB
+    volumes:
+      # Automatic Database Seeding:
+      # MongoDB executes all .js and .sh files in /docker-entrypoint-initdb.d
+      # on first startup (when mongodb_data volume is empty).
+      # init-mongo.js creates 3 collections (trips, baggage, tickets) and
+      # inserts sample PNR data for testing: GHTW42, ABC123
+      # WHY: Provides ready-to-use test data without manual setup
+      - ./mongo-init:/docker-entrypoint-initdb.d
+      - mongodb_data:/data/db
+      # WHY: Persist database files across restarts; data survives container recreation
+    networks:
+      - pnr-network
+      # WHY: Enables service discovery; app can connect via 'pnr-mongodb' hostname
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      # WHY: Verifies MongoDB is ready to accept connections before app starts
+      interval: 15s # Check every 15 seconds
+      timeout: 5s # Fail if check takes longer than 5s
+      retries: 5 # Mark unhealthy after 5 consecutive failures
+      start_period: 30s # Give MongoDB 30s to initialize before checks count
+    restart: unless-stopped
+    # WHY: Auto-restart on crashes except manual stop; ensures high availability
+    # Resource Limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0' # Max 1 CPU core
+          memory: 512M # Max 512MB RAM
+        reservations:
+          cpus: '0.25' # Reserve 0.25 CPU core
+          memory: 256M # Reserve 256MB RAM
+    # WHY: MongoDB can be memory-hungry, limit prevents OOM
+    # 512M is sufficient for dev/test workloads with sample data
+
+    # ===========================================================================
+    # Redis Cache
+    # ===========================================================================
+  redis:
+    image: redis:7-alpine
+    # WHY: Alpine base keeps image small (~30MB); Redis 7 provides latest features
+    container_name: pnr-redis
+    ports:
+      - "6379:6379"
+      # WHY: Exposes Redis port for external tools (Redis CLI, RedisInsight)
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    # Command Breakdown:
+    #   --appendonly yes: Enable AOF persistence (logs all write operations)
+    #   --maxmemory 128mb: Hard limit Redis memory usage to 128MB
+    #   --maxmemory-policy allkeys-lru: Evict least recently used keys when full
+    # WHY: 
+    #   AOF provides durability (cache survives restarts)
+    #   Memory limit prevents Redis from consuming excessive RAM
+    #   LRU eviction keeps most-accessed data in cache
+    volumes:
+      - redis_data:/data
+      # WHY: Persist AOF file across restarts; enables cache recovery
+    networks:
+      - pnr-network # Connects to isolated bridge network
+    healthcheck:
+      # Use redis-cli to ping the server
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s # Check every 10 seconds
+      timeout: 3s # Fail if check takes longer than 3s
+      retries: 3 # Mark unhealthy after 3 consecutive failures
+      start_period: 10s # Give Redis 10s to start (Redis starts fast)
+    restart: unless-stopped
+    # WHY: Auto-restart on crashes except manual stop; ensures high availability
+    # Resource Limits
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5' # Max 0.5 CPU core
+          memory: 256M # Max 256MB RAM
+        reservations:
+          cpus: '0.1' # Reserve 0.1 CPU core
+          memory: 128M # Reserve 128MB RAM
+    # WHY: Redis is lightweight, smaller limits are sufficient
+    # Memory limit (256M) > maxmemory (128M) for overhead
+
+    # ===========================================================================
+    # PHASE 3: Swagger UI - Interactive API Documentation
+    # ===========================================================================
+  swagger-ui:
+    image: swaggerapi/swagger-ui:latest
+    # WHY: Official Swagger UI provides interactive API documentation interface
+    container_name: pnr-swagger-ui
+    ports:
+      - "8081:8080"
+      # WHY: Maps container port 8080 to host 8081 to avoid conflict with PNR app
+    environment:
+      # Point to OpenAPI spec endpoint
+      # IMPORTANT: Use localhost (not service name) because browser makes the request
+      # Browser runs on host machine, not inside Docker network
+      API_URL: http://localhost:8080/v3/api-docs
+      # SpringDoc OpenAPI automatically generates spec at /v3/api-docs
+    depends_on:
+      # Wait for PNR app to be healthy before starting
+      # WHY: Swagger UI needs the API to be available to fetch OpenAPI spec
+      pnr-aggregator:
+        condition: service_healthy
+    networks:
+      - pnr-network
+      # WHY: Connects to same network for internal communication (though browser uses localhost)
+    restart: unless-stopped
+    # WHY: Auto-restart on crashes except manual stop; ensures documentation stays available
+    # Resource Limits
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25' # Max 0.25 CPU core
+          memory: 128M # Max 128MB RAM
+        reservations:
+          cpus: '0.1' # Reserve 0.1 CPU core
+          memory: 64M # Reserve 64MB RAM
+    # WHY: Swagger UI is static web content, minimal resources needed
+
+    # =============================================================================
+    # Volumes (Persistent Storage)
+    # =============================================================================
+    # Named volumes persist data across container restarts and docker-compose down
+    # Data survives until explicitly removed with: docker-compose down -v
+    # =============================================================================
+volumes:
+  mongodb_data:
+    # Stores MongoDB database files (/data/db in container)
+    # WHY: Preserves PNR data (trips, baggage, tickets) across restarts
+    # Location: Docker managed volume (use 'docker volume inspect' to find path)
+  redis_data:
+    # Stores Redis AOF (Append-Only File) for persistence
+    # WHY: Enables cache recovery after restarts, reducing database load
+    # Note: Redis can also work without persistence (pure cache)
+
+    # =============================================================================
+    # Networks
+    # =============================================================================
+networks:
+  pnr-network:
+    driver: bridge # Default Docker network driver (isolated layer 2 network)
+    # WHY: 
+    #   - Service Discovery: Containers can reach each other by service name
+    #     (e.g., pnr-aggregator can connect to "pnr-mongodb:27017")
+    #   - Isolation: Services can't access other Docker networks or host network
+    #   - Automatic DNS: Docker provides built-in DNS resolution for service names
+
+    # =============================================================================
+    # USAGE INSTRUCTIONS & REFERENCE
+    # =============================================================================
+    #
+    # LIFECYCLE COMMANDS:
+    #   docker-compose up -d              # Start all services in background
+    #   docker-compose up -d --build      # Rebuild images and start
+    #   docker-compose down               # Stop and remove containers (keeps volumes)
+    #   docker-compose down -v            # Stop, remove containers AND volumes (full reset)
+    #   docker-compose restart            # Restart all services
+    #   docker-compose ps                 # Show running containers
+    #
+    # MONITORING & DEBUGGING:
+    #   docker-compose logs -f                      # Follow logs from all services
+    #   docker-compose logs -f pnr-aggregator       # Follow specific service logs
+    #   docker-compose logs --tail=100 pnr-mongodb  # Show last 100 lines
+    #   docker-compose exec pnr-aggregator sh       # Open shell in container
+    #   docker-compose top                          # Show running processes
+    #
+    # INDIVIDUAL SERVICE CONTROL:
+    #   docker-compose start mongodb              # Start only MongoDB
+    #   docker-compose stop pnr-aggregator        # Stop only PNR app
+    #   docker-compose restart redis              # Restart only Redis
+    #
+    # ACCESS POINTS:
+    #   PNR API:
+    #     http://localhost:8080/booking/{pnr}           # Fetch PNR booking details
+    #     http://localhost:8080/actuator/health         # Health check (UP/DOWN status)
+    #     http://localhost:8080/actuator/circuitbreakers # Circuit breaker states
+    #   
+    #   Swagger UI:
+    #     http://localhost:8081                         # Interactive API documentation
+    #   
+    #   Database Access:
+    #     mongodb://localhost:27017                     # MongoDB connection string
+    #     redis://localhost:6379                        # Redis connection string
+    #
+    # SAMPLE TEST COMMANDS:
+    #   # Test with pre-loaded PNR data:
+    #   curl http://localhost:8080/booking/GHTW42     # Economy flight (2 passengers)
+    #   curl http://localhost:8080/booking/ABC123     # Business flight (1 passenger)
+    #   curl http://localhost:8080/booking/INVALID    # Test 404 response
+    #
+    #   # Test WebSocket real-time updates:
+    #   #   1. Open test-files/websocket-test.html in your browser
+    #   #   2. Click "Connect" to establish WebSocket connection
+    #   #   3. Use the API controls to fetch booking data (e.g., GHTW42)
+    #   #   4. Observe real-time WebSocket messages in the right panel
+    #
+    # PORT MAPPINGS:
+    #   8080  - PNR Aggregator API
+    #   8081  - Swagger UI
+    #   27017 - MongoDB
+    #   6379  - Redis
+    #
+    # TROUBLESHOOTING:
+    #   - "Connection refused" errors:
+    #     → Wait for health checks to pass (docker-compose ps shows "healthy")
+    #     → Check logs: docker-compose logs -f pnr-aggregator
+    #   
+    #   - MongoDB not seeding data:
+    #     → Data seeds only on FIRST startup when volume is empty
+    #     → To re-seed: docker-compose down -v && docker-compose up -d
+    #   
+    #   - Swagger UI can't fetch API docs:
+    #     → Verify app is healthy: curl http://localhost:8080/actuator/health
+    #     → Check CORS errors in browser console
+    #     → Verify API_URL uses localhost (not service name)
+    #
+    #   - WebSocket connection fails:
+    #     → Verify PNR app is healthy: docker-compose ps
+    #     → Check connection URL: ws://localhost:8080/ws/pnr (not wss://)
+    #     → Open test-files/websocket-test.html in browser for interactive testing
+    #
+    # =============================================================================
+

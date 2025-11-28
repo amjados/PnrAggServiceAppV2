@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Diagram Only - Service Calls DB Online</title>
+    <script type="module">
+        import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>
+    <script src="js_common.js" defer></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 10px;
+            background: #fafafa;
+        }
+
+        .mermaid {
+            font-size: 16px;
+        }
+
+        .mermaid svg {
+            min-width: 4800px;
+            width: auto !important;
+            height: auto !important;
+        }
+
+        .participant-tooltip {
+            position: fixed;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            pointer-events: none;
+            z-index: 10000;
+            display: none;
+            white-space: nowrap;
+        }
+
+        .lifeline-colored {
+            cursor: pointer;
+            transition: stroke-width 0.2s, opacity 0.2s;
+        }
+
+        .lifeline-colored:hover {
+            stroke-width: 4px !important;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="mermaid">
+        sequenceDiagram
+        autonumber
+
+        actor Client as HTTP Client
+        actor WSClient as WebSocket Client
+        participant C as BookingController
+        participant AGG as BookingAggregatorService
+        participant TS as TripService
+        participant CB1 as Circuit Breaker tripServiceCB
+        participant BS as BaggageService
+        participant CB2 as Circuit Breaker baggageServiceCB
+        participant TK as TicketService
+        participant CB3 as Circuit Breaker ticketServiceCB
+        participant DB as MongoDB
+        participant EB as Vert.x EventBus pnr.fetched
+        participant LOG as PnrEventConsumer
+        participant WSH as PNRWebSocketHandler
+        participant Sessions as Active Sessions
+
+        Note over WSClient,Sessions: WebSocket Already Connected
+        WSClient->>Sessions: ws://localhost:8080/ws/pnr
+
+        Client->>C: GET /booking/GHTW42
+        C->>AGG: aggregateBooking("GHTW42")
+
+        par Parallel Group: Trip and Baggage
+        AGG->>TS: getTripInfo("GHTW42")
+        TS->>CB1: Check circuit state
+        Note over CB1: State: CLOSED - Allow request
+        CB1->>DB: find("trips", {bookingReference: "GHTW42"})
+        DB-->>CB1: trip document
+        Note over CB1: Success recorded
+        CB1-->>TS: trip data
+        TS-->>AGG: Future Trip
+        and
+        AGG->>BS: getBaggageInfo("GHTW42")
+        BS->>CB2: Check circuit state
+        Note over CB2: State: CLOSED - Allow request
+        CB2->>DB: find("baggage", {bookingReference: "GHTW42"})
+        DB-->>CB2: baggage document
+        Note over CB2: Success recorded
+        CB2-->>BS: baggage data
+        BS-->>AGG: Future Baggage
+        end
+
+        par Parallel Group: Tickets for passengers
+        AGG->>TK: getTicket("GHTW42", passenger1)
+        TK->>CB3: Check circuit state
+        Note over CB3: State: CLOSED - Allow request
+        CB3->>DB: find("tickets", {pnr: "GHTW42", passengerNumber: 1})
+        DB-->>CB3: null (not found)
+        CB3-->>TK: null
+        Note over TK: .recover() handles null
+        TK-->>AGG: Future null
+        and
+        AGG->>TK: getTicket("GHTW42", passenger2)
+        TK->>CB3: Check circuit state
+        CB3->>DB: find("tickets", {pnr: "GHTW42", passengerNumber: 2})
+        DB-->>CB3: ticket document
+        CB3-->>TK: ticket data
+        TK-->>AGG: Future Ticket
+        end
+
+        Note over AGG: Wait for all parallel futures - Future.all(trip, baggage, tickets)
+
+        AGG->>AGG: mergeData(trip, baggage, tickets)
+        Note over AGG: Build BookingResponse status SUCCESS
+
+        AGG->>EB: publish pnr.fetched event
+
+        par EventBus Multi-Consumer Broadcast
+        EB->>LOG: consume message
+        Note over LOG: Log to console [EventBus] PNR GHTW42 fetched
+        LOG->>LOG: Write to console
+        and
+        EB->>WSH: consume message
+        Note over WSH: Receive JsonObject event
+        WSH->>Sessions: broadcast event
+        loop For each active session
+        Sessions->>WSClient: TextMessage JSON
+        Note over WSClient: Display in browser
+        end
+        end
+
+        AGG-->>C: Future BookingResponse
+        C-->>Client: HTTP 200 OK JSON Response
+
+        Note over Client,WSClient: Client receives TWO updates
+    </div>
+</body>
+
+</html>

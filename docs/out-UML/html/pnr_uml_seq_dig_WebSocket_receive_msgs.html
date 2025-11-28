@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>PNR WebSocket Receiving Messages</title>
+    <link rel="stylesheet" href="css_common.css">
+    <script type="module">
+        import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>
+    <script src="js_common.js" defer></script>
+</head>
+
+<body>
+    <div class="container">
+
+        <h2>Sequence Diagram: WebSocket Receiving Messages from HTTP Requests</h2>
+
+        <p>Shows how WebSocket clients receive real-time notifications after end user makes HTTP request to
+            <code>http://localhost:8080/booking/GHTW42</code>. Works regardless of database status (online or offline).
+            EventBus publishes events consumed by WebSocket handler which broadcasts to all connected clients.
+        </p>
+
+        <iframe src="pnr_uml_seq_dig_WebSocket_receive_msgs_diagram.html"
+            style="width: 100%; height: 800px; border: 1px solid #ddd; border-radius: 8px; background: #fafafa;">
+        </iframe>
+
+        <div class="note">
+            <strong>Architecture Pattern:</strong> Publish-Subscribe pattern via Vert.x EventBus. Single publisher
+            (BookingAggregatorService) publishes to "pnr.fetched" address. Multiple consumers (PnrEventConsumer for
+            logging, PNRWebSocketHandler for broadcasting) receive same event independently. WebSocket handler
+            broadcasts to all active sessions stored in thread-safe ConcurrentHashMap.
+        </div>
+
+        <div class="summary">
+            <h3>Key Points</h3>
+            <ul>
+                <li><strong>Event-Driven:</strong> HTTP request triggers event publication to EventBus</li>
+                <li><strong>Decoupled Design:</strong> Publisher does not know about consumers</li>
+                <li><strong>Multi-Consumer:</strong> Same event consumed by logger and WebSocket handler</li>
+                <li><strong>Broadcast Pattern:</strong> WebSocket handler sends to all connected clients</li>
+                <li><strong>Database Agnostic:</strong> Works with both SUCCESS and DEGRADED status</li>
+                <li><strong>Real-Time Delivery:</strong> WebSocket clients receive updates immediately</li>
+                <li><strong>Thread-Safe:</strong> ConcurrentHashMap ensures safe concurrent access to sessions</li>
+            </ul>
+        </div>
+
+        <div class="summary">
+            <h3>Message Flow</h3>
+            <ul>
+                <li><strong>Step 1:</strong> HTTP client makes GET request to /booking/GHTW42</li>
+                <li><strong>Step 2:</strong> BookingAggregatorService processes request (queries DB or uses cache)</li>
+                <li><strong>Step 3:</strong> Service publishes JsonObject event to EventBus address "pnr.fetched"</li>
+                <li><strong>Step 4:</strong> EventBus delivers message to all registered consumers</li>
+                <li><strong>Step 5:</strong> PnrEventConsumer logs event details to console</li>
+                <li><strong>Step 6:</strong> PNRWebSocketHandler receives event and calls broadcast()</li>
+                <li><strong>Step 7:</strong> Handler loops through all active WebSocket sessions</li>
+                <li><strong>Step 8:</strong> Each open session receives TextMessage with JSON data</li>
+                <li><strong>Step 9:</strong> Browser clients receive via ws.onmessage() callback</li>
+                <li><strong>Step 10:</strong> Client-side JavaScript displays notification in UI</li>
+            </ul>
+        </div>
+
+        <div class="summary">
+            <h3>Event Message Structure</h3>
+            <ul>
+                <li><strong>pnr:</strong> Booking reference (e.g., "GHTW42")</li>
+                <li><strong>status:</strong> Request status ("SUCCESS" or "DEGRADED")</li>
+                <li><strong>timestamp:</strong> ISO 8601 timestamp of event (e.g., "2025-11-27T15:30:45.123Z")</li>
+            </ul>
+        </div>
+
+    </div>
+</body>
+
+</html>
