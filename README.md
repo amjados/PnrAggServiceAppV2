@@ -242,6 +242,26 @@ When no fallback data is available:
 
 ## Testing Circuit Breaker
 
+### Automated Test Script (Recommended)
+
+Run the PowerShell test script for comprehensive circuit breaker testing:
+
+```powershell
+.\test-files\circuit-breaker-test.ps1
+```
+
+**What it tests:**
+- Normal operation with MongoDB running
+- Circuit breaker opens after failure threshold
+- Fallback mechanisms (cached and default data)
+- Circuit recovery after MongoDB restart
+- Response time improvements
+
+**Expected output:**
+- Phase 1: SUCCESS responses (MongoDB up)
+- Phase 2: Circuit opens, fast-fail with fallback data
+- Phase 3: Circuit recovers (OPEN → HALF_OPEN → CLOSED)
+
 ### Manual Test
 
 ```bash
