@@ -71,7 +71,7 @@ temp/
 *.swp
 
 # Documentation (out-readme)
-docs/out-readme/DEVELOPMENT-GUIDE.md
+docs/out-readme/
 
 # Old/archived files
 docs/out-UML/_X_old/
