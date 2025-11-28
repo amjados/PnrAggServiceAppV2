@@ -75,3 +75,6 @@ docs/out-readme/DEVELOPMENT-GUIDE.md
 
 # Old/archived files
 docs/out-UML/_X_old/
+
+# Generated HTML documentation
+docs/out-UML/html/
