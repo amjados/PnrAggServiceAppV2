@@ -52,12 +52,31 @@ public class CacheConfig {
         public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
                 // Configure Redis cache with TTL and serialization settings
                 RedisCacheConfiguration cacheConfiguration = RedisCacheConfiguration.defaultCacheConfig()
-                                .entryTtl(Duration.ofMinutes(10)) // Cache entries expire after 10 minutes
+                                .entryTtl(Duration.ofMinutes(10)) // Cache entries expire after 10 minutes.
+                                /*
+                                 * When using Redis as a cache in Spring Boot, everything stored in
+                                 * Redis must
+                                 * be serialized (converted) into a format Redis can save.
+                                 * Spring Boot lets you choose how keys and values are serialized.
+                                 */
                                 .serializeKeysWith(
                                                 RedisSerializationContext.SerializationPair
                                                                 .fromSerializer(new StringRedisSerializer()))
+                                /*
+                                 * Keys will be stored as plain human-readable strings in Redis.
+                                 * Easy to debug using Redis CLI.
+                                 * Keys look clean and readable.
+                                 * Works with normal string keys in Spring Cache.
+                                 */
                                 .serializeValuesWith(RedisSerializationContext.SerializationPair
                                                 .fromSerializer(new GenericJackson2JsonRedisSerializer()))
+                                /*
+                                 * Values are stored as JSON in Redis.
+                                 * It uses Jackson under the hood to serialize/deserialize objects.
+                                 * Human-readable JSON values
+                                 * Supports ANY Java object without extra config
+                                 * Avoids Java’s default binary serialization (slow + unsafe)
+                                 */
                                 .disableCachingNullValues(); // Prevent caching of null values
 
                 return RedisCacheManager.builder(connectionFactory)
