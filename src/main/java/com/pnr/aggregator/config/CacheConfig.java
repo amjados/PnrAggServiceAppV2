@@ -1,7 +1,6 @@
 package com.pnr.aggregator.config;
 
 import org.springframework.cache.CacheManager;
-import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
@@ -19,12 +18,22 @@ import java.time.Duration;
  * ---cache manager won't be configured, breaking caching functionality.
  * =========
  * -@EnableCaching: Enables Spring's annotation-driven cache management.
- * capability.
- * --WithoutIT: All cache operations would be no-ops;
+ * --capability.
+ * --WithoutIT: All cache operations [@Cacheable, @CachePut, or @CacheEvict]
+ * would be no-ops;
  * ---fallback caching for circuit breakers wouldn't work.
+ * =========
+ * [@EnableCaching] is NOT used in this configuration.
+ * 
+ * Reason: All caching is done programmatically using cacheManager.getCache()
+ * and cache.put() directly in service classes. No Spring cache annotations
+ * ([@Cacheable], [@CachePut], [@CacheEvict]) are used.
+ * 
+ * [@EnableCaching] is only needed when Spring intercepts methods decorated with
+ * cache annotations. Since we're manually managing the cache through the
+ * CacheManager API for explicit control, this annotation is unnecessary.
  */
 @Configuration
-@EnableCaching
 public class CacheConfig {
 
         /**
