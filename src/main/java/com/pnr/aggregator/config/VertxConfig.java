@@ -6,6 +6,7 @@ import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -25,6 +26,12 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 public class VertxConfig {
+
+    @Value("${vertx.worker-pool-size:40}")
+    private int workerPoolSize;
+
+    @Value("${vertx.event-loop-pool-size:4}")
+    private int eventLoopPoolSize;
 
     /**
      * -@Autowired: Dependency injection for MongoDB properties.
@@ -48,8 +55,8 @@ public class VertxConfig {
     @Bean
     public Vertx vertx() {
         VertxOptions options = new VertxOptions()
-                .setWorkerPoolSize(40)
-                .setEventLoopPoolSize(4);
+                .setWorkerPoolSize(workerPoolSize)
+                .setEventLoopPoolSize(eventLoopPoolSize);
 
         return Vertx.vertx(options);
     }

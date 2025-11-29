@@ -1,5 +1,6 @@
 package com.pnr.aggregator.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -22,24 +23,38 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
+    @Value("${cors.allowed-origins:http://localhost:8081,http://127.0.0.1:8081,http://pnr-swagger-ui:8080}")
+    private String[] allowedOrigins;
+
+    @Value("${cors.allowed-origin-patterns:file://*,null}")
+    private String[] allowedOriginPatterns;
+
+    @Value("${cors.allowed-methods:GET,POST,PUT,DELETE,OPTIONS,HEAD}")
+    private String[] allowedMethods;
+
+    @Value("${cors.allowed-headers:*}")
+    private String allowedHeaders;
+
+    @Value("${cors.allow-credentials:true}")
+    private boolean allowCredentials;
+
+    @Value("${cors.max-age:3600}")
+    private long maxAge;
+
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
                 // Allow various origins
-                .allowedOrigins(
-                        "http://localhost:8081",
-                        "http://127.0.0.1:8081",
-                        "http://pnr-swagger-ui:8080" // Docker internal network
-                )
+                .allowedOrigins(allowedOrigins)
                 // Allow file:// protocol and null origin for local HTML files
-                .allowedOriginPatterns("file://*", "null")
+                .allowedOriginPatterns(allowedOriginPatterns)
                 // Allow all HTTP methods
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD")
+                .allowedMethods(allowedMethods)
                 // Allow all headers
-                .allowedHeaders("*")
+                .allowedHeaders(allowedHeaders)
                 // Allow credentials (cookies, authorization headers)
-                .allowCredentials(true)
-                // Cache preflight response for 1 hour
-                .maxAge(3600);
+                .allowCredentials(allowCredentials)
+                // Cache preflight response
+                .maxAge(maxAge);
     }
 }

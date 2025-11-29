@@ -1,5 +1,6 @@
 package com.pnr.aggregator.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -36,6 +37,9 @@ import java.time.Duration;
 @Configuration
 public class CacheConfig {
 
+        @Value("${spring.cache.redis.time-to-live:600000}")
+        private long cacheTtlMinutes;
+
         /**
          * -@Bean: Marks this method as a bean producer - Spring will manage the.
          * --returned object.
@@ -52,7 +56,7 @@ public class CacheConfig {
         public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
                 // Configure Redis cache with TTL and serialization settings
                 RedisCacheConfiguration cacheConfiguration = RedisCacheConfiguration.defaultCacheConfig()
-                                .entryTtl(Duration.ofMinutes(10)) // Cache entries expire after 10 minutes.
+                                .entryTtl(Duration.ofMillis(cacheTtlMinutes)) // Cache TTL from application.yml
                                 /*
                                  * When using Redis as a cache in Spring Boot, everything stored in
                                  * Redis must
