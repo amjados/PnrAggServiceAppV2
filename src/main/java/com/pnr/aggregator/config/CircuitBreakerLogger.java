@@ -28,6 +28,10 @@ import jakarta.annotation.PostConstruct;
  * --Creates: private static final Logger log =
  * ---LoggerFactory.getLogger(CircuitBreakerLogger.class)
  * --Enables logging of circuit breaker events
+ * 
+ * =========
+ * Only sets up event listeners programmatically
+ * Circuit breaker settings come from YAML
  */
 @Component
 @Slf4j

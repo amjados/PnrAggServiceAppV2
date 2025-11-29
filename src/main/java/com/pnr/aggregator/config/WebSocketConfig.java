@@ -48,6 +48,10 @@ public class WebSocketConfig implements WebSocketConfigurer {
      * --Handler manages session lifecycle and message broadcasting
      * --WithoutIT: pnrWebSocketHandler would be null;
      * ---WebSocket endpoint registration would fail with NullPointerException.
+     * =========
+     * Hardcoded in class: WebSocket endpoint (/ws/pnr), allowed origins
+     * Why: WebSocket handler registration requires programmatic setup
+     * 
      */
     @Autowired
     private PNRWebSocketHandler pnrWebSocketHandler;

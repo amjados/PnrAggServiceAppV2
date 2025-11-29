@@ -17,6 +17,11 @@ import org.springframework.context.annotation.Configuration;
  * ----WithoutIT:: Spring won't recognize this as a configuration class;
  * -@Bean methods won't be processed, and Vert.x beans won't be available for
  * injection.
+ * =========
+ * Hardcoded in class: Worker pool size (40), event loop size (4), MongoDB
+ * client config
+ * Why: Vert.x-specific programmatic configuration, no Spring Boot auto-config
+ * for Vert.x
  */
 @Configuration
 public class VertxConfig {

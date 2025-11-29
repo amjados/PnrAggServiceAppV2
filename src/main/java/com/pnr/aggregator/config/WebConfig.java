@@ -15,6 +15,9 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * --Enables Spring to process this class and apply web configurations
  * --WithoutIT: Spring won't recognize this as a configuration class; CORS
  * ---settings won't be applied, and browsers will block cross-origin requests.
+ * ========
+ * Hardcoded in class: CORS origins, allowed methods, credentials
+ * Why: Complex CORS configuration requires programmatic setup
  */
 @Configuration
 public class WebConfig implements WebMvcConfigurer {

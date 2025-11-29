@@ -7,17 +7,13 @@ import org.springframework.stereotype.Component;
 /**
  * MongoDB Configuration Properties
  * 
- * WHY: Binds 'spring.data.mongodb.*' properties from application.yml to a
- * type-safe
- * Java class
+ * WHY: Binds 'spring.data.mongodb.*' properties from application.yml to a type-safe
  * USE CASE: Provides MongoDB connection details for Vert.x MongoClient
  * 
  * PROPERTIES:
  * - spring.data.mongodb.host: MongoDB server hostname
  * - spring.data.mongodb.port: MongoDB server port
  * - spring.data.mongodb.database: Database name
- * 
- * USAGE: Inject this bean anywhere you need MongoDB connection details
  */
 /**
  * -@Data: Lombok annotation that generates boilerplate code.
@@ -37,16 +33,21 @@ import org.springframework.stereotype.Component;
  * --Discovered during component scanning
  * =========
  * -@ConfigurationProperties: Binds external configuration to this.
- * class
+ * class.
  * --Maps properties with prefix "spring.data.mongodb" to class
- * fields
- * --Example: spring.data.mongodb.host -> setHost() is called
+ * fields.
+ * --It ONLY reads property values from application.yml / application.properties
+ * at startup.
+ * It is always 100% synchronous.
+ * It is not blocking I/O.
+ * It is not reactive.
+ * It is just configuration binding.
  * --Provides type-safe configuration instead of using [@Value] for
- * each property
+ * each property.
  * --Values can come from application.yml, application.properties, or
- * environment variables
- * --WithoutIT: Properties from application.yml won't be loaded;
- * ---MongoDB connection would use only hardcoded defaults.
+ * environment variables.
+ * --WithoutIT: Properties from application.yml won't be loaded; MongoDB
+ * connection would use only hardcoded defaults.
  */
 @Data
 @Component
