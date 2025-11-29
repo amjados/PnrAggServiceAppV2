@@ -6,12 +6,12 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * @Data: Lombok annotation for automatic boilerplate code generation
- * - Generates getters for all fields (getBookingReference(), getCabinClass(), etc.)
- * - Generates setters for all fields (setBookingReference(), setCabinClass(), etc.)
- * - Creates equals() and hashCode() methods based on all fields
- * - Creates toString() method with field values
- * - Eliminates ~50+ lines of boilerplate code for this class
+ * -@Data: Lombok annotation for automatic boilerplate code generation
+ * --Generates getters for all fields (getBookingReference(), getCabinClass(), etc.)
+ * --Generates setters for all fields (setBookingReference(), setCabinClass(), etc.)
+ * --Creates equals() and hashCode() methods based on all fields
+ * --Creates toString() method with field values
+ * --Eliminates ~50+ lines of boilerplate code for this class
  */
 @Data
 public class Trip {

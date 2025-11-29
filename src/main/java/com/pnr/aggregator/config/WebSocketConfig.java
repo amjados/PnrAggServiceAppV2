@@ -25,28 +25,27 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
  * ADVANTAGE: Real-time updates without polling, reduces server load
  */
 /**
- * @Configuration: Marks this class as a source of bean definitions
- * - Indicates this is a Spring configuration class
- * - Spring will process this class to configure WebSocket support
+ * -@Configuration: Marks this class as a source of bean definitions
+ * --Indicates this is a Spring configuration class
+ * --Spring will process this class to configure WebSocket support
+ * =========
+ * -@EnableWebSocket: Enables WebSocket message handling
+ * --Activates Spring's WebSocket support infrastructure
+ * --Required for implementing WebSocketConfigurer
+ * --Enables endpoints for bidirectional client-server communication
  */
 @Configuration
-/**
- * @EnableWebSocket: Enables WebSocket message handling
- * - Activates Spring's WebSocket support infrastructure
- * - Required for implementing WebSocketConfigurer
- * - Enables endpoints for bidirectional client-server communication
- */
 @EnableWebSocket
 public class WebSocketConfig implements WebSocketConfigurer {
 
     /**
-     * @Autowired: Dependency injection for WebSocket handler
-     * - Injects PNRWebSocketHandler component to handle WebSocket connections
-     * - Handler manages session lifecycle and message broadcasting
+     * -@Autowired: Dependency injection for WebSocket handler
+     * --Injects PNRWebSocketHandler component to handle WebSocket connections
+     * --Handler manages session lifecycle and message broadcasting
      */
     @Autowired
     private PNRWebSocketHandler pnrWebSocketHandler;
-    
+
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(pnrWebSocketHandler, "/ws/pnr")

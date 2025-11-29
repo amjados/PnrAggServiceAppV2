@@ -23,38 +23,38 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * @Service: Marks this class as a Spring service component
- * - Registers this class as a Spring bean for dependency injection
- * - Contains business logic for trip data retrieval
+ * -@Service: Marks this class as a Spring service component
+ * --Registers this class as a Spring bean for dependency injection
+ * --Contains business logic for trip data retrieval
+ * =========
+ * -@Slf4j: Lombok annotation for automatic logger creation
+ * --Generates: private static final Logger log =
+ * LoggerFactory.getLogger(TripService.class)
  */
 @Service
-/**
- * @Slf4j: Lombok annotation for automatic logger creation
- * - Generates: private static final Logger log = LoggerFactory.getLogger(TripService.class)
- */
 @Slf4j
 public class TripService {
 
     /**
-     * @Autowired: Dependency injection for Vert.x MongoClient
-     * - Injects MongoClient bean configured in VertxConfig
-     * - Used for non-blocking MongoDB operations
+     * -@Autowired: Dependency injection for Vert.x MongoClient
+     * --Injects MongoClient bean configured in VertxConfig
+     * --Used for non-blocking MongoDB operations
      */
     @Autowired
     private MongoClient mongoClient;
 
     /**
-     * @Autowired: Dependency injection for Spring CacheManager
-     * - Injects CacheManager bean configured in CacheConfig (Redis)
-     * - Used for caching trip data as fallback when MongoDB is unavailable
+     * -@Autowired: Dependency injection for Spring CacheManager
+     * --Injects CacheManager bean configured in CacheConfig (Redis)
+     * --Used for caching trip data as fallback when MongoDB is unavailable
      */
     @Autowired
     private CacheManager cacheManager;
 
     /**
-     * @Autowired: Dependency injection for Resilience4j CircuitBreakerRegistry
-     * - Injects CircuitBreakerRegistry to create circuit breaker instances
-     * - Registry manages all circuit breakers in the application
+     * -@Autowired: Dependency injection for Resilience4j CircuitBreakerRegistry
+     * --Injects CircuitBreakerRegistry to create circuit breaker instances
+     * --Registry manages all circuit breakers in the application
      */
     @Autowired
     private CircuitBreakerRegistry circuitBreakerRegistry;
@@ -62,11 +62,11 @@ public class TripService {
     private CircuitBreaker circuitBreaker;
 
     /**
-     * @PostConstruct: Lifecycle callback executed after dependency injection
-     * - Called automatically after all @Autowired dependencies are injected
-     * - Runs once during bean initialization, before the bean is put into service
-     * - Ideal for initialization logic that requires injected dependencies
-     * - Here: Initializes the circuit breaker instance from the registry
+     * -@PostConstruct: Lifecycle callback executed after dependency injection
+     * --Called automatically after all @Autowired dependencies are injected
+     * --Runs once during bean initialization, before the bean is put into service
+     * --Ideal for initialization logic that requires injected dependencies
+     * --Here: Initializes the circuit breaker instance from the registry
      */
     @jakarta.annotation.PostConstruct
     public void init() {

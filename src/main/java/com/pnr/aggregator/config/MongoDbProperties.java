@@ -20,27 +20,28 @@ import org.springframework.stereotype.Component;
  * USAGE: Inject this bean anywhere you need MongoDB connection details
  */
 /**
- * @Data: Lombok annotation that generates boilerplate code
- * - Automatically creates getters for all fields (getHost(), getPort(), getDatabase())
- * - Automatically creates setters for all fields (setHost(), setPort(), setDatabase())
- * - Generates equals(), hashCode(), and toString() methods
- * - Reduces code verbosity by eliminating getter/setter boilerplate
+ * -@Data: Lombok annotation that generates boilerplate code
+ * --Automatically creates getters for all fields (getHost(), getPort(),
+ * getDatabase())
+ * --Automatically creates setters for all fields (setHost(), setPort(),
+ * setDatabase())
+ * --Generates equals(), hashCode(), and toString() methods
+ * --Reduces code verbosity by eliminating getter/setter boilerplate
+ * =========
+ * -@Component: Registers this class as a Spring component
+ * --Makes this class a Spring-managed bean
+ * --Enables @Autowired injection in other classes
+ * --Discovered during component scanning
+ * =========
+ * -@ConfigurationProperties: Binds external configuration to this class
+ * --Maps properties with prefix "spring.data.mongodb" to class fields
+ * --Example: spring.data.mongodb.host -> setHost() is called
+ * --Provides type-safe configuration instead of using @Value for each property
+ * --Values can come from application.yml, application.properties, or
+ * environment variables
  */
 @Data
-/**
- * @Component: Registers this class as a Spring component
- * - Makes this class a Spring-managed bean
- * - Enables @Autowired injection in other classes
- * - Discovered during component scanning
- */
 @Component
-/**
- * @ConfigurationProperties: Binds external configuration to this class
- * - Maps properties with prefix "spring.data.mongodb" to class fields
- * - Example: spring.data.mongodb.host -> setHost() is called
- * - Provides type-safe configuration instead of using @Value for each property
- * - Values can come from application.yml, application.properties, or environment variables
- */
 @ConfigurationProperties(prefix = "spring.data.mongodb")
 public class MongoDbProperties {
 

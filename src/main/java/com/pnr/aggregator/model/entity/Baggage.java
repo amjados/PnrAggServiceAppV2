@@ -5,10 +5,10 @@ import lombok.Data;
 import java.util.List;
 
 /**
- * @Data: Lombok annotation for POJO boilerplate code
- * - Auto-generates getters/setters for all fields
- * - Creates equals(), hashCode(), toString() implementations
- * - Enables clean, concise entity definitions
+ * -@Data: Lombok annotation for POJO boilerplate code
+ * --Auto-generates getters/setters for all fields
+ * --Creates equals(), hashCode(), toString() implementations
+ * --Enables clean, concise entity definitions
  */
 @Data
 public class Baggage {

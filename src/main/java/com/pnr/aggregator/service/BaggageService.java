@@ -19,35 +19,35 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * @Service: Marks this as a Spring service component
- * - Registers this class as a bean in the Spring context
- * - Contains business logic for baggage data retrieval
+ * -@Service: Marks this as a Spring service component
+ * --Registers this class as a bean in the Spring context
+ * --Contains business logic for baggage data retrieval
+ * =========
+ * -@Slf4j: Lombok annotation for logger generation
+ * --Creates: private static final Logger log =
+ * LoggerFactory.getLogger(BaggageService.class)
  */
 @Service
-/**
- * @Slf4j: Lombok annotation for logger generation
- * - Creates: private static final Logger log = LoggerFactory.getLogger(BaggageService.class)
- */
 @Slf4j
 public class BaggageService {
 
     /**
-     * @Autowired: Dependency injection for MongoClient
-     * - Injects Vert.x MongoClient for async database operations
+     * -@Autowired: Dependency injection for MongoClient
+     * --Injects Vert.x MongoClient for async database operations
      */
     @Autowired
     private MongoClient mongoClient;
 
     /**
-     * @Autowired: Dependency injection for CacheManager
-     * - Injects Redis-based cache manager for fallback data
+     * -@Autowired: Dependency injection for CacheManager
+     * --Injects Redis-based cache manager for fallback data
      */
     @Autowired
     private CacheManager cacheManager;
 
     /**
-     * @Autowired: Dependency injection for CircuitBreakerRegistry
-     * - Manages circuit breaker instances for resilience patterns
+     * -@Autowired: Dependency injection for CircuitBreakerRegistry
+     * --Manages circuit breaker instances for resilience patterns
      */
     @Autowired
     private CircuitBreakerRegistry circuitBreakerRegistry;
@@ -55,9 +55,9 @@ public class BaggageService {
     private CircuitBreaker circuitBreaker;
 
     /**
-     * @PostConstruct: Post-initialization lifecycle hook
-     * - Executes after all dependencies are injected
-     * - Initializes the circuit breaker from the registry
+     * -@PostConstruct: Post-initialization lifecycle hook
+     * --Executes after all dependencies are injected
+     * --Initializes the circuit breaker from the registry
      */
     @jakarta.annotation.PostConstruct
     public void init() {

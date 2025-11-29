@@ -42,11 +42,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * ERROR HANDLING: Catches IOException during broadcast, continues with other sessions
  */
 /**
- * @Component: Marks this class as a Spring component
- * - Registers this as a Spring-managed bean
- * - Makes it available for dependency injection
- * - Discovered during component scanning
- * - Used in WebSocketConfig to register the handler
+ * -@Component: Marks this class as a Spring component
+ * --Registers this as a Spring-managed bean
+ * --Makes it available for dependency injection
+ * --Discovered during component scanning
+ * --Used in WebSocketConfig to register the handler
  */
 @Component
 public class PNRWebSocketHandler extends TextWebSocketHandler {
@@ -54,20 +54,20 @@ public class PNRWebSocketHandler extends TextWebSocketHandler {
     private final Set<WebSocketSession> sessions = ConcurrentHashMap.newKeySet();
 
     /**
-     * @Autowired: Dependency injection for Vert.x EventBus
-     * - Injects EventBus configured in VertxConfig
-     * - Enables subscription to PNR events
-     * - Bridges Vert.x event bus with WebSocket communication
+     * -@Autowired: Dependency injection for Vert.x EventBus
+     * --Injects EventBus configured in VertxConfig
+     * --Enables subscription to PNR events
+     * --Bridges Vert.x event bus with WebSocket communication
      */
     @Autowired
     private EventBus eventBus;
 
     /**
-     * @PostConstruct: Initialization method executed after dependency injection
-     * - Runs automatically after @Autowired fields are populated
-     * - Executes once during bean lifecycle, before handling requests
-     * - Subscribes to "pnr.fetched" topic on event bus
-     * - Ensures consumer is ready when application starts
+     * -@PostConstruct: Initialization method executed after dependency injection
+     * --Runs automatically after @Autowired fields are populated
+     * --Executes once during bean lifecycle, before handling requests
+     * --Subscribes to "pnr.fetched" topic on event bus
+     * --Ensures consumer is ready when application starts
      */
     @PostConstruct
     public void init() {
@@ -76,7 +76,7 @@ public class PNRWebSocketHandler extends TextWebSocketHandler {
             broadcast(data.encode());
         });
     }
-    
+
     /**
      * Called when a new WebSocket connection is established
      * Adds the session to the active sessions set
@@ -85,7 +85,7 @@ public class PNRWebSocketHandler extends TextWebSocketHandler {
     public void afterConnectionEstablished(WebSocketSession session) {
         sessions.add(session);
     }
-    
+
     /**
      * Called when a WebSocket connection is closed
      * Removes the session from the active sessions set
@@ -94,7 +94,7 @@ public class PNRWebSocketHandler extends TextWebSocketHandler {
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         sessions.remove(session);
     }
-    
+
     /**
      * Broadcasts a message to all active WebSocket sessions
      * Skips closed sessions and handles IOException gracefully

@@ -6,18 +6,17 @@ import lombok.Data;
 import java.util.List;
 
 /**
- * @Data: Lombok annotation for boilerplate reduction
- * - Generates getters/setters automatically
- * - Provides equals(), hashCode(), and toString()
- * - Clean DTO class definition
+ * -@Data: Lombok annotation for boilerplate reduction
+ * --Generates getters/setters automatically
+ * --Provides equals(), hashCode(), and toString()
+ * --Clean DTO class definition
+ * =========
+ * -@JsonInclude(NON_NULL): Jackson serialization control
+ * --Only serializes non-null fields to JSON
+ * --Omits null fields from API response
+ * --Cleaner JSON output for clients
  */
 @Data
-/**
- * @JsonInclude(NON_NULL): Jackson serialization control
- * - Only serializes non-null fields to JSON
- * - Omits null fields from API response
- * - Cleaner JSON output for clients
- */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class FlightDTO {
     private String flightNumber;

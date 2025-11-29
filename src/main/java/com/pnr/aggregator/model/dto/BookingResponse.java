@@ -6,10 +6,10 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * @Data: Lombok annotation for boilerplate code generation
- * - Generates getters/setters for all fields
- * - Creates equals(), hashCode(), and toString() methods
- * - Essential for DTO (Data Transfer Object) classes
+ * -@Data: Lombok annotation for boilerplate code generation
+ * --Generates getters/setters for all fields
+ * --Creates equals(), hashCode(), and toString() methods
+ * --Essential for DTO (Data Transfer Object) classes
  */
 @Data
 public class BookingResponse {
@@ -27,12 +27,12 @@ public class BookingResponse {
      * PNR-level fallback messages
      * Contains errors/fallback reasons for trip data (from cache)
      * Only included in JSON when fallback occurred
-     */
-    /**
-     * @JsonInclude(NON_NULL): Jackson annotation for conditional JSON serialization
-     * - Only includes this field in JSON output if value is not null
-     * - Keeps JSON response clean by omitting null fields
-     * - Example: pnrFallbackMsg only appears when fallback occurs
+     * =========
+     * -@JsonInclude(NON_NULL): Jackson annotation for conditional JSON
+     * serialization
+     * --Only includes this field in JSON output if value is not null
+     * --Keeps JSON response clean by omitting null fields
+     * --Example: pnrFallbackMsg only appears when fallback occurs
      */
     @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
     private List<String> pnrFallbackMsg;

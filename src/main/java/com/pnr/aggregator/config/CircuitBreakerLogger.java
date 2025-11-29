@@ -17,33 +17,33 @@ import jakarta.annotation.PostConstruct;
  * and calculations to help diagnose why circuits are opening.
  */
 /**
- * @Component: Registers this class as a Spring component
- * - Makes this a Spring-managed bean
- * - Enables automatic discovery during component scanning
- * - Allows dependency injection and lifecycle management
+ * -@Component: Registers this class as a Spring component
+ * --Makes this a Spring-managed bean
+ * --Enables automatic discovery during component scanning
+ * --Allows dependency injection and lifecycle management
+ * =========
+ * -@Slf4j: Lombok annotation for logger generation
+ * --Creates: private static final Logger log =
+ * LoggerFactory.getLogger(CircuitBreakerLogger.class)
+ * --Enables logging of circuit breaker events
  */
 @Component
-/**
- * @Slf4j: Lombok annotation for logger generation
- * - Creates: private static final Logger log = LoggerFactory.getLogger(CircuitBreakerLogger.class)
- * - Enables logging of circuit breaker events
- */
 @Slf4j
 public class CircuitBreakerLogger {
 
     /**
-     * @Autowired: Dependency injection for CircuitBreakerRegistry
-     * - Injects registry containing all circuit breakers in the application
-     * - Used to attach event listeners to all circuit breakers
+     * -@Autowired: Dependency injection for CircuitBreakerRegistry
+     * --Injects registry containing all circuit breakers in the application
+     * --Used to attach event listeners to all circuit breakers
      */
     @Autowired
     private CircuitBreakerRegistry circuitBreakerRegistry;
 
     /**
-     * @PostConstruct: Initialization method for event listener registration
-     * - Called automatically after dependency injection completes
-     * - Registers event listeners on all circuit breakers
-     * - Enables monitoring of circuit breaker state changes and metrics
+     * -@PostConstruct: Initialization method for event listener registration
+     * --Called automatically after dependency injection completes
+     * --Registers event listeners on all circuit breakers
+     * --Enables monitoring of circuit breaker state changes and metrics
      */
     @PostConstruct
     public void registerEventListeners() {

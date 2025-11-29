@@ -9,31 +9,31 @@ import org.springframework.stereotype.Service;
 import jakarta.annotation.PostConstruct;
 
 /**
- * @Service: Marks this class as a Spring service component
- * - Registers as a Spring bean for automatic discovery and injection
- * - Contains event bus consumer logic for PNR events
+ * -@Service: Marks this class as a Spring service component
+ * --Registers as a Spring bean for automatic discovery and injection
+ * --Contains event bus consumer logic for PNR events
+ * =========
+ * -@Slf4j: Lombok annotation for SLF4J logger generation
+ * --Auto-generates: private static final Logger log =
+ * LoggerFactory.getLogger(PnrEventConsumer.class)
  */
 @Service
-/**
- * @Slf4j: Lombok annotation for SLF4J logger generation
- * - Auto-generates: private static final Logger log = LoggerFactory.getLogger(PnrEventConsumer.class)
- */
 @Slf4j
 public class PnrEventConsumer {
 
     /**
-     * @Autowired: Dependency injection for Vert.x instance
-     * - Injects Vert.x configured in VertxConfig
-     * - Provides access to the event bus for async messaging
+     * -@Autowired: Dependency injection for Vert.x instance
+     * --Injects Vert.x configured in VertxConfig
+     * --Provides access to the event bus for async messaging
      */
     @Autowired
     private Vertx vertx;
 
     /**
-     * @PostConstruct: Initialization method called after bean creation
-     * - Executes automatically after dependency injection
-     * - Registers event bus consumer for "pnr.fetched" events
-     * - Ensures consumer is ready before application starts handling requests
+     * -@PostConstruct: Initialization method called after bean creation
+     * --Executes automatically after dependency injection
+     * --Registers event bus consumer for "pnr.fetched" events
+     * --Ensures consumer is ready before application starts handling requests
      */
     @PostConstruct
     public void registerEventBusConsumer() {

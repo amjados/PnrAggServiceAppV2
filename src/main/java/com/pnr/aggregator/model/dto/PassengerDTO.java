@@ -6,19 +6,18 @@ import lombok.Data;
 import java.util.List;
 
 /**
- * @Data: Lombok annotation for getter/setter generation
- * - Auto-generates getters and setters for all fields
- * - Creates equals(), hashCode(), and toString() methods
- * - Simplifies DTO development
+ * -@Data: Lombok annotation for getter/setter generation
+ * --Auto-generates getters and setters for all fields
+ * --Creates equals(), hashCode(), and toString() methods
+ * --Simplifies DTO development
+ * =========
+ * -@JsonInclude(NON_NULL): Jackson annotation at class level
+ * --Applies to ALL fields in this class
+ * --Only includes non-null fields in JSON output
+ * --Reduces JSON payload size by excluding null/empty values
+ * --Example: ticketUrl only appears if passenger has a ticket
  */
 @Data
-/**
- * @JsonInclude(NON_NULL): Jackson annotation at class level
- * - Applies to ALL fields in this class
- * - Only includes non-null fields in JSON output
- * - Reduces JSON payload size by excluding null/empty values
- * - Example: ticketUrl only appears if passenger has a ticket
- */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class PassengerDTO {
     private Integer passengerNumber;

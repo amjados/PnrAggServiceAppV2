@@ -17,36 +17,39 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * @RestController: Combines @Controller and @ResponseBody
- * - Marks this class as a Spring MVC controller that handles HTTP requests
- * - Automatically serializes return values to JSON (no need for @ResponseBody on each method)
+ * -@RestController: Combines @Controller and @ResponseBody
+ * --Marks this class as a Spring MVC controller that handles HTTP requests
+ * --Automatically serializes return values to JSON (no need for @ResponseBody
+ * on each method)
+ * =========
+ * -@RequestMapping("/booking"): Maps HTTP requests to handler methods
+ * --All methods in this controller will handle requests starting with /booking
+ * --Example: /booking/ABC123 will be handled by methods with additional path
+ * mappings
+ * =========
+ * -@Validated: Enables method parameter validation using Jakarta Validation
+ * (JSR-380)
+ * --Validates method parameters annotated with @Pattern, @NotNull, @Size, etc.
+ * --If validation fails, throws ConstraintViolationException (handled
+ * by @ExceptionHandler)
+ * =========
+ * -@Slf4j: Lombok annotation that generates a SLF4J Logger field
+ * --Creates a private static final Logger log =
+ * LoggerFactory.getLogger(BookingController.class)
+ * --Allows using log.info(), log.error(), log.debug() without manually creating
+ * logger
  */
 @RestController
-/**
- * @RequestMapping("/booking"): Maps HTTP requests to handler methods
- * - All methods in this controller will handle requests starting with /booking
- * - Example: /booking/ABC123 will be handled by methods with additional path mappings
- */
 @RequestMapping("/booking")
-/**
- * @Validated: Enables method parameter validation using Jakarta Validation (JSR-380)
- * - Validates method parameters annotated with @Pattern, @NotNull, @Size, etc.
- * - If validation fails, throws ConstraintViolationException (handled by @ExceptionHandler)
- */
 @Validated
-/**
- * @Slf4j: Lombok annotation that generates a SLF4J Logger field
- * - Creates a private static final Logger log = LoggerFactory.getLogger(BookingController.class)
- * - Allows using log.info(), log.error(), log.debug() without manually creating logger
- */
 @Slf4j
 public class BookingController {
 
     /**
-     * @Autowired: Enables dependency injection
-     * - Spring automatically injects an instance of BookingAggregatorService
-     * - Finds the bean by type from the application context
-     * - No need for manual instantiation or constructor injection
+     * -@Autowired: Enables dependency injection
+     * --Spring automatically injects an instance of BookingAggregatorService
+     * --Finds the bean by type from the application context
+     * --No need for manual instantiation or constructor injection
      */
     @Autowired
     private BookingAggregatorService aggregatorService;
@@ -66,22 +69,25 @@ public class BookingController {
      *         - Sanitizes input before database queries
      */
     /**
-     * @GetMapping("/{pnr}"): Maps HTTP GET requests to this method
-     * - Handles GET requests to /booking/{pnr} (e.g., /booking/ABC123)
-     * - {pnr} is a path variable that will be extracted from the URL
-     * - Shorthand for @RequestMapping(value = "/{pnr}", method = RequestMethod.GET)
+     * -@GetMapping("/{pnr}"): Maps HTTP GET requests to this method
+     * --Handles GET requests to /booking/{pnr} (e.g., /booking/ABC123)
+     * --{pnr} is a path variable that will be extracted from the URL
+     * --Shorthand for @RequestMapping(value = "/{pnr}", method = RequestMethod.GET)
      */
     @GetMapping("/{pnr}")
     public CompletableFuture<ResponseEntity<?>> getBooking(
             /**
-             * @PathVariable: Extracts value from URI path
-             * - Binds the {pnr} placeholder in the URL to the method parameter
-             * - Example: /booking/ABC123 -> pnr = "ABC123"
+             * -@PathVariable: Extracts value from URI path
+             * --Binds the {pnr} placeholder in the URL to the method
+             *   parameter
+             * --Example: /booking/ABC123 -> pnr = "ABC123"
              *
-             * @Pattern: Jakarta Validation constraint for regex matching
-             * - Validates that pnr matches ^[A-Z0-9]{6}$ (exactly 6 uppercase alphanumeric characters)
-             * - If validation fails, throws ConstraintViolationException
-             * - Prevents SQL/NoSQL injection by restricting input to safe characters
+             * -@Pattern: Jakarta Validation constraint for regex matching
+             * --Validates that pnr matches ^[A-Z0-9]{6}$ (exactly 6 uppercase
+             *   alphanumeric characters)
+             * --If validation fails, throws ConstraintViolationException
+             * --Prevents SQL/NoSQL injection by restricting input to safe
+             *   characters
              */
             @PathVariable @Pattern(regexp = "^[A-Z0-9]{6}$", message = "PNR must be exactly 6 alphanumeric characters (A-Z, 0-9)") String pnr) {
         log.info("Received request for PNR: {}", pnr);
@@ -125,11 +131,14 @@ public class BookingController {
     /**
      * Handle validation exceptions (invalid PNR format)
      *
-     * @ExceptionHandler: Defines exception handling method for this controller
-     * - Catches ConstraintViolationException thrown by @Validated parameters
-     * - Only handles exceptions from methods in this controller
-     * - Allows custom error responses instead of default Spring error page
-     * - Returns HTTP 400 (Bad Request) with user-friendly error message
+     * -@ExceptionHandler: Defines exception handling method for this controller
+     * --Catches ConstraintViolationException thrown
+     *   by @Validated parameters
+     * --Only handles exceptions from methods in this controller
+     * --Allows custom error responses instead of default Spring
+     *   error page
+     * --Returns HTTP 400 (Bad Request) with user-friendly error
+     *   message
      */
     @ExceptionHandler(jakarta.validation.ConstraintViolationException.class)
     public ResponseEntity<?> handleValidationException(jakarta.validation.ConstraintViolationException ex) {
@@ -142,10 +151,11 @@ public class BookingController {
     }
 
     /**
-     * @ExceptionHandler(Exception.class): Global exception handler for this controller
-     * - Catches all uncaught exceptions from methods in this controller
-     * - Acts as a fallback for exceptions not handled by specific handlers
-     * - Returns HTTP 500 (Internal Server Error) for unexpected errors
+     * -@ExceptionHandler(Exception.class): Global exception handler for this
+     * controller
+     * --Catches all uncaught exceptions from methods in this controller
+     * --Acts as a fallback for exceptions not handled by specific handlers
+     * --Returns HTTP 500 (Internal Server Error) for unexpected errors
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleException(Exception ex) {

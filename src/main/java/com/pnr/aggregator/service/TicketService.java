@@ -14,28 +14,27 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 /**
- * @Service: Registers this class as a Spring service bean
- * - Enables component scanning and dependency injection
- * - Contains business logic for ticket retrieval
+ * -@Service: Registers this class as a Spring service bean
+ * --Enables component scanning and dependency injection
+ * --Contains business logic for ticket retrieval
+ * =========
+ * -@Slf4j: Lombok annotation for automatic SLF4J logger
+ * --Generates logger field without boilerplate code
  */
 @Service
-/**
- * @Slf4j: Lombok annotation for automatic SLF4J logger
- * - Generates logger field without boilerplate code
- */
 @Slf4j
 public class TicketService {
 
     /**
-     * @Autowired: Dependency injection for MongoClient
-     * - Injects Vert.x MongoClient for non-blocking MongoDB queries
+     * -@Autowired: Dependency injection for MongoClient
+     * --Injects Vert.x MongoClient for non-blocking MongoDB queries
      */
     @Autowired
     private MongoClient mongoClient;
 
     /**
-     * @Autowired: Dependency injection for CircuitBreakerRegistry
-     * - Provides access to circuit breaker configurations
+     * -@Autowired: Dependency injection for CircuitBreakerRegistry
+     * --Provides access to circuit breaker configurations
      */
     @Autowired
     private CircuitBreakerRegistry circuitBreakerRegistry;
@@ -43,9 +42,9 @@ public class TicketService {
     private CircuitBreaker circuitBreaker;
 
     /**
-     * @PostConstruct: Bean initialization callback
-     * - Runs after dependency injection completes
-     * - Retrieves circuit breaker instance for this service
+     * -@PostConstruct: Bean initialization callback
+     * --Runs after dependency injection completes
+     * --Retrieves circuit breaker instance for this service
      */
     @jakarta.annotation.PostConstruct
     public void init() {

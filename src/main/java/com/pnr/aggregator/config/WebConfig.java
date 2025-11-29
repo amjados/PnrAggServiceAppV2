@@ -9,6 +9,11 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * WHY: Enables CORS (Cross-Origin Resource Sharing) for web clients
  * USE CASE: Allows Swagger UI, test HTML files, and browser clients to access API
  */
+/**
+ * -@Configuration: Marks this class as a Spring configuration class
+ * --Indicates this class contains configuration methods for the application
+ * --Enables Spring to process this class and apply web configurations
+ */
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
