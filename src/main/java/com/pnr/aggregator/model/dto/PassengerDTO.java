@@ -17,7 +17,7 @@ import java.util.List;
  * --Reduces JSON payload size by excluding null/empty values
  * --Example: ticketUrl only appears if passenger has a ticket
  * --WithoutIT: All fields would be serialized to JSON even when null;
- * increasing payload size and cluttering the response.
+ * ---increasing payload size and cluttering the response.
  */
 @Data
 @JsonInclude(JsonInclude.Include.NON_NULL)

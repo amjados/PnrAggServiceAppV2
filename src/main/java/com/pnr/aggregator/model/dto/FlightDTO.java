@@ -16,7 +16,7 @@ import java.util.List;
  * --Omits null fields from API response
  * --Cleaner JSON output for clients
  * --WithoutIT: Null fields would be included in JSON response;
- * increasing response size and reducing readability.
+ * ---increasing response size and reducing readability.
  */
 @Data
 @JsonInclude(JsonInclude.Include.NON_NULL)

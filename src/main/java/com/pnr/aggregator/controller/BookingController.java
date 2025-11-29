@@ -22,14 +22,14 @@ import java.util.concurrent.CompletableFuture;
  * --Automatically serializes return values to JSON (no need for [@ResponseBody]
  * on each method)
  * --WithoutIT: This class won't handle HTTP requests;
- * all API endpoints would return 404 Not Found.
+ * ---all API endpoints would return 404 Not Found.
  * =========
  * -@RequestMapping("/booking"): Maps HTTP requests to handler methods
  * --All methods in this controller will handle requests starting with /booking
  * --Example: /booking/ABC123 will be handled by methods with additional path
  * mappings
  * --WithoutIT: Endpoints wouldn't have the /booking prefix;
- * URLs would need to change, breaking API compatibility.
+ * ---URLs would need to change, breaking API compatibility.
  * =========
  * -@Validated: Enables method parameter validation using Jakarta Validation
  * (JSR-380).
@@ -38,7 +38,7 @@ import java.util.concurrent.CompletableFuture;
  * --If validation fails, throws ConstraintViolationException (handled
  * by [@ExceptionHandler])
  * --WithoutIT: [@Pattern] validation on parameters wouldn't work;
- * invalid PNR formats could reach the service layer, risking injection attacks.
+ * ---invalid PNR formats could reach the service layer, risking injection attacks.
  * =========
  * -@Slf4j: Lombok annotation that generates a SLF4J Logger field
  * --Creates a private static final Logger log =
@@ -58,7 +58,7 @@ public class BookingController {
      * --Finds the bean by type from the application context
      * --No need for manual instantiation or constructor injection
      * --WithoutIT: aggregatorService would be null;
-     * all API calls would fail with NullPointerException.
+     * ---all API calls would fail with NullPointerException.
      */
     @Autowired
     private BookingAggregatorService aggregatorService;
@@ -84,7 +84,7 @@ public class BookingController {
      * --Shorthand for [@RequestMapping](value = "/{pnr}", method =
      * RequestMethod.GET)
      * --WithoutIT: This method wouldn't handle GET requests;
-     * API endpoint /booking/{pnr} would return 404.
+     * ---API endpoint /booking/{pnr} would return 404.
      */
     @GetMapping("/{pnr}")
     public CompletableFuture<ResponseEntity<?>> getBooking(
@@ -94,7 +94,7 @@ public class BookingController {
              * parameter
              * --Example: /booking/ABC123 -> pnr = "ABC123"
              * --WithoutIT: pnr parameter would be null;
-             * method couldn't access the PNR from the URL.
+             * ---method couldn't access the PNR from the URL.
              * =========
              * -@Pattern: Jakarta Validation constraint for regex matching.
              * --Validates that pnr matches ^[A-Z0-9]{6}$ (exactly 6 uppercase
@@ -103,7 +103,7 @@ public class BookingController {
              * --Prevents SQL/NoSQL injection by restricting input to safe
              * characters
              * --WithoutIT: Invalid PNR formats could pass through;
-             * potentially allowing injection attacks or malformed data.
+             * ---potentially allowing injection attacks or malformed data.
              */
             @PathVariable @Pattern(regexp = "^[A-Z0-9]{6}$", message = "PNR must be exactly 6 alphanumeric characters (A-Z, 0-9)") String pnr) {
         log.info("Received request for PNR: {}", pnr);

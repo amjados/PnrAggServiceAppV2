@@ -29,7 +29,7 @@ import org.springframework.stereotype.Component;
  * --Reduces code verbosity by eliminating getter/setter boilerplate
  * =========
  * -@Component: Registers this class as a Spring component.
- * --WithoutIT: This class won't be a Spring bean;
+ * --WithoutIT: This class won't be a Spring bean.
  * =========
  * -@Autowired injection of MongoDbProperties would fail.
  * --Makes this class a Spring-managed bean
@@ -46,7 +46,7 @@ import org.springframework.stereotype.Component;
  * --Values can come from application.yml, application.properties, or
  * environment variables
  * --WithoutIT: Properties from application.yml won't be loaded;
- * MongoDB connection would use only hardcoded defaults.
+ * ---MongoDB connection would use only hardcoded defaults.
  */
 @Data
 @Component

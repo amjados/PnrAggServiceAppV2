@@ -48,7 +48,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * --Discovered during component scanning
  * --Used in WebSocketConfig to register the handler
  * --WithoutIT: Handler won't be discovered;
- * WebSocket endpoints wouldn't work.
+ * ---WebSocket endpoints wouldn't work.
  */
 @Component
 public class PNRWebSocketHandler extends TextWebSocketHandler {
@@ -61,7 +61,7 @@ public class PNRWebSocketHandler extends TextWebSocketHandler {
      * --Enables subscription to PNR events
      * --Bridges Vert.x event bus with WebSocket communication
      * --WithoutIT: eventBus would be null;
-     * real-time updates wouldn't be broadcast to clients.
+     * ---real-time updates wouldn't be broadcast to clients.
      */
     @Autowired
     private EventBus eventBus;
@@ -73,7 +73,7 @@ public class PNRWebSocketHandler extends TextWebSocketHandler {
      * --Subscribes to "pnr.fetched" topic on event bus
      * --Ensures consumer is ready when application starts
      * --WithoutIT: init() won't be called automatically;
-     * event bus consumer wouldn't be registered, no real-time updates.
+     * ---event bus consumer wouldn't be registered, no real-time updates.
      */
     @PostConstruct
     public void init() {

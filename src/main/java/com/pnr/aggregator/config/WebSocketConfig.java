@@ -29,14 +29,14 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
  * --Indicates this is a Spring configuration class
  * --Spring will process this class to configure WebSocket support
  * --WithoutIT: WebSocket configuration won't be processed;
- * WebSocket endpoints won't be registered.
+ * ---WebSocket endpoints won't be registered.
  * =========
  * -@EnableWebSocket: Enables WebSocket message handling.
  * --Activates Spring's WebSocket support infrastructure
  * --Required for implementing WebSocketConfigurer
  * --Enables endpoints for bidirectional client-server communication
  * --WithoutIT: WebSocket infrastructure won't be initialized;
- * clients can't connect to WebSocket endpoints, breaking real-time updates.
+ * ---clients can't connect to WebSocket endpoints, breaking real-time updates.
  */
 @Configuration
 @EnableWebSocket
@@ -47,7 +47,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
      * --Injects PNRWebSocketHandler component to handle WebSocket connections
      * --Handler manages session lifecycle and message broadcasting
      * --WithoutIT: pnrWebSocketHandler would be null;
-     * WebSocket endpoint registration would fail with NullPointerException.
+     * ---WebSocket endpoint registration would fail with NullPointerException.
      */
     @Autowired
     private PNRWebSocketHandler pnrWebSocketHandler;

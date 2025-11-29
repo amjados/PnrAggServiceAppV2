@@ -18,12 +18,12 @@ import java.util.List;
  * --Enables component scanning and dependency injection
  * --Contains business logic for ticket retrieval
  * --WithoutIT: Service won't be discovered;
- * ticket retrieval functionality would be unavailable.
+ * ---ticket retrieval functionality would be unavailable.
  * =========
  * -@Slf4j: Lombok annotation for automatic SLF4J logger
  * --Generates logger field without boilerplate code
  * --WithoutIT: No logger available;
- * compilation errors on log statements.
+ * ---compilation errors on log statements.
  */
 @Service
 @Slf4j
@@ -33,7 +33,7 @@ public class TicketService {
      * -@Autowired: Dependency injection for MongoClient.
      * --Injects Vert.x MongoClient for non-blocking MongoDB queries
      * --WithoutIT: mongoClient would be null;
-     * all database queries would fail.
+     * ---all database queries would fail.
      */
     @Autowired
     private MongoClient mongoClient;
@@ -42,7 +42,7 @@ public class TicketService {
      * -@Autowired: Dependency injection for CircuitBreakerRegistry.
      * --Provides access to circuit breaker configurations
      * --WithoutIT: circuitBreakerRegistry would be null;
-     * circuit breaker initialization would fail.
+     * ---circuit breaker initialization would fail.
      */
     @Autowired
     private CircuitBreakerRegistry circuitBreakerRegistry;
@@ -54,7 +54,7 @@ public class TicketService {
      * --Runs after dependency injection completes
      * --Retrieves circuit breaker instance for this service
      * --WithoutIT: init() won't be called automatically;
-     * circuit breaker would remain null.
+     * ---circuit breaker would remain null.
      */
     @jakarta.annotation.PostConstruct
     public void init() {

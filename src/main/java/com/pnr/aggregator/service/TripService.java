@@ -27,13 +27,13 @@ import java.util.List;
  * --Registers this class as a Spring bean for dependency injection
  * --Contains business logic for trip data retrieval
  * --WithoutIT: Service won't be discovered;
- * trip data retrieval would be unavailable.
+ * ---trip data retrieval would be unavailable.
  * =========
  * -@Slf4j: Lombok annotation for automatic logger creation
  * --Generates: private static final Logger log =
  * LoggerFactory.getLogger(TripService.class)
  * --WithoutIT: No logger available;
- * compilation errors on log statements.
+ * ---compilation errors on log statements.
  */
 @Service
 @Slf4j
@@ -44,7 +44,7 @@ public class TripService {
      * --Injects MongoClient bean configured in VertxConfig
      * --Used for non-blocking MongoDB operations
      * --WithoutIT: mongoClient would be null;
-     * all trip data queries would fail.
+     * ---all trip data queries would fail.
      */
     @Autowired
     private MongoClient mongoClient;
@@ -54,7 +54,7 @@ public class TripService {
      * --Injects CacheManager bean configured in CacheConfig (Redis)
      * --Used for caching trip data as fallback when MongoDB is unavailable
      * --WithoutIT: cacheManager would be null;
-     * fallback caching wouldn't work.
+     * ---fallback caching wouldn't work.
      */
     @Autowired
     private CacheManager cacheManager;
@@ -64,7 +64,7 @@ public class TripService {
      * --Injects CircuitBreakerRegistry to create circuit breaker instances
      * --Registry manages all circuit breakers in the application
      * --WithoutIT: circuitBreakerRegistry would be null;
-     * circuit breaker initialization would fail.
+     * ---circuit breaker initialization would fail.
      */
     @Autowired
     private CircuitBreakerRegistry circuitBreakerRegistry;
@@ -78,7 +78,7 @@ public class TripService {
      * --Ideal for initialization logic that requires injected dependencies
      * --Here: Initializes the circuit breaker instance from the registry
      * --WithoutIT: init() won't be called automatically;
-     * circuit breaker would remain null.
+     * ---circuit breaker would remain null.
      */
     @jakarta.annotation.PostConstruct
     public void init() {

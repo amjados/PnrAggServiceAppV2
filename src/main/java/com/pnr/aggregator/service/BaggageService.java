@@ -29,7 +29,7 @@ import java.util.List;
  * --Creates: private static final Logger log =
  * LoggerFactory.getLogger(BaggageService.class)
  * --WithoutIT: No logger available;
- * compilation errors on log statements.
+ * ---compilation errors on log statements.
  */
 @Service
 @Slf4j
@@ -39,7 +39,7 @@ public class BaggageService {
      * -@Autowired: Dependency injection for MongoClient.
      * --Injects Vert.x MongoClient for async database operations
      * --WithoutIT: mongoClient would be null;
-     * database queries would fail with NullPointerException.
+     * ---database queries would fail with NullPointerException.
      */
     @Autowired
     private MongoClient mongoClient;
@@ -48,7 +48,7 @@ public class BaggageService {
      * -@Autowired: Dependency injection for CacheManager.
      * --Injects Redis-based cache manager for fallback data
      * --WithoutIT: cacheManager would be null;
-     * fallback caching mechanism would fail.
+     * ---fallback caching mechanism would fail.
      */
     @Autowired
     private CacheManager cacheManager;
@@ -57,7 +57,7 @@ public class BaggageService {
      * -@Autowired: Dependency injection for CircuitBreakerRegistry.
      * --Manages circuit breaker instances for resilience patterns
      * --WithoutIT: circuitBreakerRegistry would be null;
-     * circuit breaker protection wouldn't work.
+     * ---circuit breaker protection wouldn't work.
      */
     @Autowired
     private CircuitBreakerRegistry circuitBreakerRegistry;
@@ -69,7 +69,7 @@ public class BaggageService {
      * --Executes after all dependencies are injected
      * --Initializes the circuit breaker from the registry
      * --WithoutIT: init() won't be called automatically;
-     * circuit breaker would remain null, breaking resilience features.
+     * ---circuit breaker would remain null, breaking resilience features.
      */
     @jakarta.annotation.PostConstruct
     public void init() {

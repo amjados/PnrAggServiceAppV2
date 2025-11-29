@@ -13,13 +13,13 @@ import jakarta.annotation.PostConstruct;
  * --Registers as a Spring bean for automatic discovery and injection
  * --Contains event bus consumer logic for PNR events
  * --WithoutIT: Service won't be discovered;
- * event bus consumer wouldn't be registered.
+ * ---event bus consumer wouldn't be registered.
  * =========
  * -@Slf4j: Lombok annotation for SLF4J logger generation
  * --Auto-generates: private static final Logger log =
  * LoggerFactory.getLogger(PnrEventConsumer.class)
  * --WithoutIT: No logger available;
- * compilation errors on log statements.
+ * ---compilation errors on log statements.
  */
 @Service
 @Slf4j
@@ -30,7 +30,7 @@ public class PnrEventConsumer {
      * --Injects Vert.x configured in VertxConfig
      * --Provides access to the event bus for async messaging
      * --WithoutIT: vertx would be null;
-     * event bus consumer registration would fail.
+     * ---event bus consumer registration would fail.
      */
     @Autowired
     private Vertx vertx;
@@ -41,7 +41,7 @@ public class PnrEventConsumer {
      * --Registers event bus consumer for "pnr.fetched" events
      * --Ensures consumer is ready before application starts handling requests
      * --WithoutIT: registerEventBusConsumer() won't be called automatically;
-     * event bus consumer wouldn't be registered.
+     * ---event bus consumer wouldn't be registered.
      */
     @PostConstruct
     public void registerEventBusConsumer() {
