@@ -17,26 +17,20 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * WebSocket Handler for PNR Real-Time Updates
  * 
- * WHY: Manages WebSocket connections and broadcasts PNR fetch events to connected clients
- * USE CASE: Enables real-time notifications when PNR data is fetched
+ * WHY: Manages WebSocket connections and broadcasts PNR fetch and retry events to connected clients
+ * USE CASE: Enables real-time notifications when PNR data is fetched or retry attempts occur
  * 
  * ARCHITECTURE:
  * 1. Maintains a thread-safe set of active WebSocket sessions
- * 2. Subscribes to Vert.x EventBus "pnr.fetched" topic on initialization
+ * 2. Subscribes to Vert.x EventBus topic: "pnr.fetched"
  * 3. When event received, broadcasts JSON data to all connected clients
- * 
+ *
  * EVENT FLOW:
  * 1. BookingAggregatorService publishes to EventBus: "pnr.fetched"
- * 2. This handler receives the event with PNR data
- * 3. Handler broadcasts to all active WebSocket sessions
- * 4. Clients receive real-time update
- * 
+ * 2. This handler receives the event and broadcasts to WebSocket clients
+ *
  * DATA FORMAT:
- * {
- *   "pnr": "GHTW42",
- *   "status": "SUCCESS",
- *   "timestamp": 1732701234567
- * }
+ * PNR Event: { "pnr": "GHTW42", "status": "SUCCESS", "timestamp": "..." }
  * 
  * THREAD SAFETY: Uses ConcurrentHashMap.newKeySet() for concurrent session management
  * ERROR HANDLING: Catches IOException during broadcast, continues with other sessions
@@ -70,13 +64,14 @@ public class PNRWebSocketHandler extends TextWebSocketHandler {
      * -@PostConstruct: Initialization method executed after dependency injection.
      * --Runs automatically after [@Autowired] fields are populated
      * --Executes once during bean lifecycle, before handling requests
-     * --Subscribes to "pnr.fetched" topic on event bus
-     * --Ensures consumer is ready when application starts
+    * --Subscribes to "pnr.fetched" topic on event bus
+     * --Ensures consumers are ready when application starts
      * --WithoutIT: init() won't be called automatically;
-     * ---event bus consumer wouldn't be registered, no real-time updates.
+     * ---event bus consumers wouldn't be registered, no real-time updates.
      */
     @PostConstruct
     public void init() {
+        // Subscribe to PNR fetch events
         eventBus.consumer("pnr.fetched", message -> {
             JsonObject data = (JsonObject) message.body();
             broadcast(data.encode());

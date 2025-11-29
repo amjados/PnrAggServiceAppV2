@@ -4,6 +4,7 @@ import com.pnr.aggregator.model.entity.Baggage;
 import com.pnr.aggregator.model.entity.BaggageAllowance;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.github.resilience4j.retry.annotation.Retry;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
@@ -70,6 +71,16 @@ public class BaggageService {
      * --Initializes the circuit breaker from the registry
      * --WithoutIT: init() won't be called automatically;
      * ---circuit breaker would remain null, breaking resilience features.
+     * 
+     * WHY MANUAL CIRCUIT BREAKER (not @CircuitBreaker annotation):
+     * --@CircuitBreaker AOP proxy can't handle Vert.x Future<T> async callbacks
+     * properly
+     * --Manual pattern allows direct fallback control with default baggage values
+     * --See TripService.init() for detailed explanation of manual vs annotation
+     * approach
+     * -- See if (!circuitBreaker.tryAcquirePermission()) { ... } in
+     * getBaggageInfo()
+     * method
      */
     @jakarta.annotation.PostConstruct
     public void init() {
@@ -77,7 +88,22 @@ public class BaggageService {
         log.info("BaggageService Circuit Breaker initialized: {}", circuitBreaker.getName());
     }
 
+    /**
+     * -@Retry: Resilience4j retry annotation for automatic retry mechanism.
+     * --name: "baggageServiceRetry" - references retry configuration in
+     * application.yml
+     * --Retries failed operations automatically before giving up
+     * --Execution Order: @Retry wraps Circuit Breaker logic
+     * ---1. Retry intercepts the method call
+     * ---2. Each retry attempt executes the circuit breaker logic
+     * ---3. If circuit breaker is OPEN, retry stops immediately
+     * --WithoutIT: No automatic retry;
+     * ---transient failures cause immediate failure without retry attempts.
+     */
+    @Retry(name = "baggageServiceRetry")
     public Future<Baggage> getBaggageInfo(String pnr) {
+        log.debug("[RETRY-DEBUG] BaggageService.getBaggageInfo() ENTRY - PNR: {} | Thread: {}", pnr,
+                Thread.currentThread().getName());
         log.info("[CB-BEFORE] BaggageService call for PNR: {} | State: {}", pnr, circuitBreaker.getState());
 
         // Check if circuit is open

@@ -80,7 +80,11 @@ public class VertxConfig {
         JsonObject config = new JsonObject()
                 .put("host", mongoDbProperties.getHost())
                 .put("port", mongoDbProperties.getPort())
-                .put("db_name", mongoDbProperties.getDatabase());
+                .put("db_name", mongoDbProperties.getDatabase())
+                // Timeout settings from application.yml
+                .put("connectTimeoutMS", mongoDbProperties.getConnectTimeoutMS())
+                .put("socketTimeoutMS", mongoDbProperties.getSocketTimeoutMS())
+                .put("serverSelectionTimeoutMS", mongoDbProperties.getServerSelectionTimeoutMS());
 
         return MongoClient.createShared(vertx, config);
     }

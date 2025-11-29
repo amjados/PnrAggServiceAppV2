@@ -96,6 +96,13 @@
             <version>${resilience4j.version}</version>
         </dependency>
 
+        <!-- 
+            Resilience4j Retry - v2.1.0
+            Automatic retry mechanism for transient failures
+            COMPATIBILITY NOTE: Version 2.x for Spring Boot 3.x (1.x for Boot 2.x)
+        -->
+        <!-- Resilience4j Retry dependency removed: retry feature reverted -->
+
         <!-- Spring Boot Actuator - Monitoring and health endpoints -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

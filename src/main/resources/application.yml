@@ -32,6 +32,9 @@ spring:
       host: ${MONGODB_HOST:localhost}
       port: ${MONGODB_PORT:27017}
       database: ${MONGODB_DATABASE:pnr_db}
+      connectTimeoutMS: 3000          # Connection timeout: 3s
+      socketTimeoutMS: 3000           # Socket read/write timeout: 3s
+      serverSelectionTimeoutMS: 3000  # Server selection timeout: 3s
 
 server:
   port: ${SERVER_PORT:8080}
@@ -130,10 +133,12 @@ logging:
     # With colors: "%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr([%thread]){magenta} %clr(%-5level){blue} %clr(%logger{36}){cyan} %clr(-){faint} %msg%n"
     # Detailed: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36}.%M\\(%line\\) - %msg%n"
   level:
-    root: INFO
-    '[com.pnr.aggregator]': DEBUG
-    '[io.vertx]': ERROR
-    '[io.github.resilience4j]': DEBUG
-    '[io.github.resilience4j.spring.utils]': ERROR  # Suppress RxJava/Reactor classpath condition checks
-    '[org.mongodb.driver]': ERROR
-    '[org.springframework]': ERROR
+    root: WARN
+    '[com.pnr.aggregator]': WARN
+    '[com.pnr.aggregator.util]': DEBUG
+    '[com.pnr.aggregator.config]': DEBUG
+    '[io.vertx]': WARN
+    '[io.github.resilience4j]': WARN
+    '[io.github.resilience4j.spring.utils]': WARN  # Suppress RxJava/Reactor classpath condition checks
+    '[org.mongodb.driver]': WARN
+    '[org.springframework]': WARN

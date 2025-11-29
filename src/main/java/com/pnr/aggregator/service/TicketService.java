@@ -3,6 +3,7 @@ package com.pnr.aggregator.service;
 import com.pnr.aggregator.model.entity.Ticket;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.github.resilience4j.retry.annotation.Retry;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
@@ -55,6 +56,16 @@ public class TicketService {
      * --Retrieves circuit breaker instance for this service
      * --WithoutIT: init() won't be called automatically;
      * ---circuit breaker would remain null.
+     * 
+     * WHY MANUAL CIRCUIT BREAKER (not @CircuitBreaker annotation):
+     * --@CircuitBreaker AOP proxy can't handle Vert.x Future<T> async callbacks
+     * properly
+     * --Manual pattern allows fallback to return null for missing tickets (valid
+     * scenario)
+     * --See TripService.init() for detailed explanation of manual vs annotation
+     * approach
+     * -- See if (!circuitBreaker.tryAcquirePermission()) { ... } in getTicket()
+     * method
      */
     @jakarta.annotation.PostConstruct
     public void init() {
@@ -62,7 +73,22 @@ public class TicketService {
         log.info("TicketService Circuit Breaker initialized: {}", circuitBreaker.getName());
     }
 
+    /**
+     * -@Retry: Resilience4j retry annotation for automatic retry mechanism.
+     * --name: "ticketServiceRetry" - references retry configuration in
+     * application.yml
+     * --Retries failed operations automatically before giving up
+     * --Execution Order: @Retry wraps Circuit Breaker logic
+     * ---1. Retry intercepts the method call
+     * ---2. Each retry attempt executes the circuit breaker logic
+     * ---3. If circuit breaker is OPEN, retry stops immediately
+     * --WithoutIT: No automatic retry;
+     * ---transient failures cause immediate failure without retry attempts.
+     */
+    @Retry(name = "ticketServiceRetry")
     public Future<Ticket> getTicket(String pnr, int passengerNumber) {
+        log.debug("[RETRY-DEBUG] TicketService.getTicket() ENTRY - PNR: {}, Passenger: {} | Thread: {}", pnr,
+                passengerNumber, Thread.currentThread().getName());
         log.info("[CB-BEFORE] TicketService call for PNR: {}, Passenger: {} | State: {}", pnr, passengerNumber,
                 circuitBreaker.getState());
 

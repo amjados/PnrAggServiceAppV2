@@ -74,7 +74,7 @@ function Run-TestRequests {
             }
         }
         
-        Start-Sleep -Milliseconds 500
+        Start-Sleep -Milliseconds 1000
     }
 }
 

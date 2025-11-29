@@ -1,4 +1,4 @@
-package com.pnr.aggregator.config;
+package com.pnr.aggregator.util;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;

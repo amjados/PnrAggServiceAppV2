@@ -54,7 +54,12 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "spring.data.mongodb")
 public class MongoDbProperties {
 
-    private String host = "localhost";
-    private int port = 27017;
-    private String database = "pnr_db";
+    private String host;
+    private int port;
+    private String database;
+
+    // Timeout settings for MongoDB connections (in milliseconds)
+    private int connectTimeoutMS;
+    private int socketTimeoutMS;
+    private int serverSelectionTimeoutMS;
 }
