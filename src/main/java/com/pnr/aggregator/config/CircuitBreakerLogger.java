@@ -26,7 +26,7 @@ import jakarta.annotation.PostConstruct;
  * =========
  * -@Slf4j: Lombok annotation for logger generation
  * --Creates: private static final Logger log =
- * LoggerFactory.getLogger(CircuitBreakerLogger.class)
+ * ---LoggerFactory.getLogger(CircuitBreakerLogger.class)
  * --Enables logging of circuit breaker events
  */
 @Component
