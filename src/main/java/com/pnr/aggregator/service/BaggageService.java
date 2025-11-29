@@ -19,7 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * -@Service: Marks this as a Spring service component
+ * -@Service: Marks this as a Spring service component.
  * --Registers this class as a bean in the Spring context
  * --Contains business logic for baggage data retrieval
  * --WithoutIT: Service won't be discovered;
@@ -36,7 +36,7 @@ import java.util.List;
 public class BaggageService {
 
     /**
-     * -@Autowired: Dependency injection for MongoClient
+     * -@Autowired: Dependency injection for MongoClient.
      * --Injects Vert.x MongoClient for async database operations
      * --WithoutIT: mongoClient would be null;
      * database queries would fail with NullPointerException.
@@ -45,7 +45,7 @@ public class BaggageService {
     private MongoClient mongoClient;
 
     /**
-     * -@Autowired: Dependency injection for CacheManager
+     * -@Autowired: Dependency injection for CacheManager.
      * --Injects Redis-based cache manager for fallback data
      * --WithoutIT: cacheManager would be null;
      * fallback caching mechanism would fail.
@@ -54,7 +54,7 @@ public class BaggageService {
     private CacheManager cacheManager;
 
     /**
-     * -@Autowired: Dependency injection for CircuitBreakerRegistry
+     * -@Autowired: Dependency injection for CircuitBreakerRegistry.
      * --Manages circuit breaker instances for resilience patterns
      * --WithoutIT: circuitBreakerRegistry would be null;
      * circuit breaker protection wouldn't work.
@@ -65,7 +65,7 @@ public class BaggageService {
     private CircuitBreaker circuitBreaker;
 
     /**
-     * -@PostConstruct: Post-initialization lifecycle hook
+     * -@PostConstruct: Post-initialization lifecycle hook.
      * --Executes after all dependencies are injected
      * --Initializes the circuit breaker from the registry
      * --WithoutIT: init() won't be called automatically;

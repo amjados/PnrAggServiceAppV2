@@ -17,12 +17,12 @@ import jakarta.annotation.PostConstruct;
  * and calculations to help diagnose why circuits are opening.
  */
 /**
- * -@Component: Registers this class as a Spring component
+ * -@Component: Registers this class as a Spring component.
  * --Makes this a Spring-managed bean
  * --Enables automatic discovery during component scanning
  * --Allows dependency injection and lifecycle management
  * --WithoutIT: This class won't be instantiated by Spring;
- * circuit breaker event logging won't be configured.
+ * --circuit breaker event logging won't be configured.
  * =========
  * -@Slf4j: Lombok annotation for logger generation
  * --Creates: private static final Logger log =
@@ -34,7 +34,7 @@ import jakarta.annotation.PostConstruct;
 public class CircuitBreakerLogger {
 
     /**
-     * -@Autowired: Dependency injection for CircuitBreakerRegistry
+     * -@Autowired: Dependency injection for CircuitBreakerRegistry.
      * --Injects registry containing all circuit breakers in the application
      * --Used to attach event listeners to all circuit breakers
      * --WithoutIT: circuitBreakerRegistry would be null;
@@ -44,7 +44,7 @@ public class CircuitBreakerLogger {
     private CircuitBreakerRegistry circuitBreakerRegistry;
 
     /**
-     * -@PostConstruct: Initialization method for event listener registration
+     * -@PostConstruct: Initialization method for event listener registration.
      * --Called automatically after dependency injection completes
      * --Registers event listeners on all circuit breakers
      * --Enables monitoring of circuit breaker state changes and metrics

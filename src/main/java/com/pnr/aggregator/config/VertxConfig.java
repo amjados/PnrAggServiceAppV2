@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * -@Configuration: Marks this class as a Spring configuration class
+ * -@Configuration: Marks this class as a Spring configuration class.
  * --Indicates this class contains [@Bean] definitions for the Spring container
  * --Processed by Spring to generate bean definitions and service requests
  * --Alternative to XML-based configuration
@@ -22,7 +22,7 @@ import org.springframework.context.annotation.Configuration;
 public class VertxConfig {
 
     /**
-     * -@Autowired: Dependency injection for MongoDB properties
+     * -@Autowired: Dependency injection for MongoDB properties.
      * --Injects MongoDbProperties configuration bean
      * --Contains MongoDB connection settings from application.properties
      * ----WithoutIT:: mongoDbProperties would be null;
@@ -32,7 +32,7 @@ public class VertxConfig {
     private MongoDbProperties mongoDbProperties;
 
     /**
-     * -@Bean: Declares a Spring bean to be managed by the container
+     * -@Bean: Declares a Spring bean to be managed by the container.
      * --Method return value is registered as a bean in the application context
      * --Bean name defaults to method name ("vertx")
      * --This Vert.x instance can be [@Autowired] into other components
@@ -50,7 +50,7 @@ public class VertxConfig {
     }
 
     /**
-     * -@Bean: Provides Vert.x EventBus as a Spring bean
+     * -@Bean: Provides Vert.x EventBus as a Spring bean.
      * --EventBus enables publish-subscribe messaging between components
      * --Method parameter (Vertx vertx) is automatically injected by Spring
      * --Used for real-time event broadcasting (e.g., PNR fetch notifications)
@@ -63,7 +63,7 @@ public class VertxConfig {
     }
 
     /**
-     * -@Bean: Configures Vert.x MongoClient as a Spring bean
+     * -@Bean: Configures Vert.x MongoClient as a Spring bean.
      * --Provides non-blocking, asynchronous MongoDB client
      * --Configured with connection details from MongoDbProperties
      * --Shared client instance improves connection pooling and performance

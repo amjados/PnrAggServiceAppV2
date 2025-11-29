@@ -6,7 +6,7 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * -@Data: Lombok annotation for boilerplate code generation
+ * -@Data: Lombok annotation for boilerplate code generation.
  * --Generates getters/setters for all fields
  * --Creates equals(), hashCode(), and toString() methods
  * --Essential for DTO (Data Transfer Object) classes

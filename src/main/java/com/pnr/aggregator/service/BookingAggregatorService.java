@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * -@Service: Marks this class as a Spring service component
+ * -@Service: Marks this class as a Spring service component.
  * --Indicates this class contains business logic
  * --Makes it a candidate for component scanning and dependency
  * injection
@@ -39,7 +39,7 @@ import java.util.stream.Collectors;
 public class BookingAggregatorService {
 
     /**
-     * -@Autowired: Dependency injection for TripService
+     * -@Autowired: Dependency injection for TripService.
      * --Spring automatically injects the TripService bean instance
      * --No manual instantiation needed
      * --WithoutIT: tripService would be null;
@@ -49,7 +49,7 @@ public class BookingAggregatorService {
     private TripService tripService;
 
     /**
-     * -@Autowired: Dependency injection for BaggageService
+     * -@Autowired: Dependency injection for BaggageService.
      * --Spring automatically injects the BaggageService bean instance
      * --WithoutIT: baggageService would be null;
      * NullPointerException when fetching baggage data.
@@ -58,7 +58,7 @@ public class BookingAggregatorService {
     private BaggageService baggageService;
 
     /**
-     * -@Autowired: Dependency injection for TicketService
+     * -@Autowired: Dependency injection for TicketService.
      * --Spring automatically injects the TicketService bean instance
      * --WithoutIT: ticketService would be null;
      * NullPointerException when fetching ticket data.

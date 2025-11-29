@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * -@RestController: Combines [@Controller] and [@ResponseBody]
+ * -@RestController: Combines [@Controller] and [@ResponseBody].
  * --Marks this class as a Spring MVC controller that handles HTTP requests
  * --Automatically serializes return values to JSON (no need for [@ResponseBody]
  * on each method)
@@ -32,7 +32,7 @@ import java.util.concurrent.CompletableFuture;
  * URLs would need to change, breaking API compatibility.
  * =========
  * -@Validated: Enables method parameter validation using Jakarta Validation
- * (JSR-380)
+ * (JSR-380).
  * --Validates method parameters annotated with [@Pattern], [@NotNull], [@Size],
  * etc.
  * --If validation fails, throws ConstraintViolationException (handled
@@ -53,7 +53,7 @@ import java.util.concurrent.CompletableFuture;
 public class BookingController {
 
     /**
-     * -@Autowired: Enables dependency injection
+     * -@Autowired: Enables dependency injection.
      * --Spring automatically injects an instance of BookingAggregatorService
      * --Finds the bean by type from the application context
      * --No need for manual instantiation or constructor injection
@@ -89,14 +89,14 @@ public class BookingController {
     @GetMapping("/{pnr}")
     public CompletableFuture<ResponseEntity<?>> getBooking(
             /**
-             * -@PathVariable: Extracts value from URI path
+             * -@PathVariable: Extracts value from URI path.
              * --Binds the {pnr} placeholder in the URL to the method
              * parameter
              * --Example: /booking/ABC123 -> pnr = "ABC123"
              * --WithoutIT: pnr parameter would be null;
              * method couldn't access the PNR from the URL.
              * =========
-             * -@Pattern: Jakarta Validation constraint for regex matching
+             * -@Pattern: Jakarta Validation constraint for regex matching.
              * --Validates that pnr matches ^[A-Z0-9]{6}$ (exactly 6 uppercase
              * alphanumeric characters)
              * --If validation fails, throws ConstraintViolationException
@@ -147,7 +147,7 @@ public class BookingController {
     /**
      * Handle validation exceptions (invalid PNR format)
      *
-     * -@ExceptionHandler: Defines exception handling method for this controller
+     * -@ExceptionHandler: Defines exception handling method for this controller.
      * --Catches ConstraintViolationException thrown
      * by [@Validated] parameters
      * --Only handles exceptions from methods in this controller

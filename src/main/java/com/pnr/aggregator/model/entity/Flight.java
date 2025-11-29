@@ -3,7 +3,7 @@ package com.pnr.aggregator.model.entity;
 import lombok.Data;
 
 /**
- * -@Data: Lombok annotation for automatic code generation
+ * -@Data: Lombok annotation for automatic code generation.
  * --Generates getters and setters for all fields
  * --Creates equals(), hashCode(), and toString() methods
  * --Reduces boilerplate code for entity/model classes

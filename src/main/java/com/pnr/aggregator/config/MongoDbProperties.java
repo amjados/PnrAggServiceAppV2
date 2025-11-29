@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component;
  * USAGE: Inject this bean anywhere you need MongoDB connection details
  */
 /**
- * -@Data: Lombok annotation that generates boilerplate code
+ * -@Data: Lombok annotation that generates boilerplate code.
  * --Automatically creates getters for all fields (getHost(), getPort(),
  * getDatabase())
  * --Automatically creates setters for all fields (setHost(), setPort(),
@@ -28,7 +28,7 @@ import org.springframework.stereotype.Component;
  * --Generates equals(), hashCode(), and toString() methods
  * --Reduces code verbosity by eliminating getter/setter boilerplate
  * =========
- * -@Component: Registers this class as a Spring component
+ * -@Component: Registers this class as a Spring component.
  * --WithoutIT: This class won't be a Spring bean;
  * =========
  * -@Autowired injection of MongoDbProperties would fail.
@@ -36,7 +36,7 @@ import org.springframework.stereotype.Component;
  * --Enables [@Autowired] injection in other classes
  * --Discovered during component scanning
  * =========
- * -@ConfigurationProperties: Binds external configuration to this
+ * -@ConfigurationProperties: Binds external configuration to this.
  * class
  * --Maps properties with prefix "spring.data.mongodb" to class
  * fields

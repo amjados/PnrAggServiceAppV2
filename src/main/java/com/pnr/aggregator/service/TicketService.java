@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 /**
- * -@Service: Registers this class as a Spring service bean
+ * -@Service: Registers this class as a Spring service bean.
  * --Enables component scanning and dependency injection
  * --Contains business logic for ticket retrieval
  * --WithoutIT: Service won't be discovered;
@@ -30,7 +30,7 @@ import java.util.List;
 public class TicketService {
 
     /**
-     * -@Autowired: Dependency injection for MongoClient
+     * -@Autowired: Dependency injection for MongoClient.
      * --Injects Vert.x MongoClient for non-blocking MongoDB queries
      * --WithoutIT: mongoClient would be null;
      * all database queries would fail.
@@ -39,7 +39,7 @@ public class TicketService {
     private MongoClient mongoClient;
 
     /**
-     * -@Autowired: Dependency injection for CircuitBreakerRegistry
+     * -@Autowired: Dependency injection for CircuitBreakerRegistry.
      * --Provides access to circuit breaker configurations
      * --WithoutIT: circuitBreakerRegistry would be null;
      * circuit breaker initialization would fail.
@@ -50,7 +50,7 @@ public class TicketService {
     private CircuitBreaker circuitBreaker;
 
     /**
-     * -@PostConstruct: Bean initialization callback
+     * -@PostConstruct: Bean initialization callback.
      * --Runs after dependency injection completes
      * --Retrieves circuit breaker instance for this service
      * --WithoutIT: init() won't be called automatically;

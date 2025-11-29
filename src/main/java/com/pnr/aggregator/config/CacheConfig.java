@@ -14,30 +14,30 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 import java.time.Duration;
 
 /**
- * -@Configuration: Indicates this class contains Spring bean definitions
+ * -@Configuration: Indicates this class contains Spring bean definitions.
  * --WithoutIT: Spring won't process [@Bean] methods;
- * cache manager won't be configured, breaking caching functionality.
+ * ---cache manager won't be configured, breaking caching functionality.
  * =========
- * -@EnableCaching: Enables Spring's annotation-driven cache management
- * capability
+ * -@EnableCaching: Enables Spring's annotation-driven cache management.
+ * capability.
  * --WithoutIT: All cache operations would be no-ops;
- * fallback caching for circuit breakers wouldn't work.
+ * ---fallback caching for circuit breakers wouldn't work.
  */
 @Configuration
 @EnableCaching
 public class CacheConfig {
 
         /**
-         * -@Bean: Marks this method as a bean producer - Spring will manage the
-         * returned object
+         * -@Bean: Marks this method as a bean producer - Spring will manage the.
+         * returned object.
+         * --WithoutIT: No cache manager available;
+         * ---fallback data storage for circuit breakers would fail.
          * Configures Redis as the cache manager with the following settings:
          * --Cache entries expire after 10 minutes
          * --Keys are serialized as strings
          * --Values are serialized as JSON using Jackson
          * --Null values are not cached
          * --Cache operations participate in ongoing transactions
-         * --WithoutIT: No cache manager available;
-         * fallback data storage for circuit breakers would fail.
          */
         @Bean
         public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {

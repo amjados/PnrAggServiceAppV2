@@ -23,7 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * -@Service: Marks this class as a Spring service component
+ * -@Service: Marks this class as a Spring service component.
  * --Registers this class as a Spring bean for dependency injection
  * --Contains business logic for trip data retrieval
  * --WithoutIT: Service won't be discovered;
@@ -50,7 +50,7 @@ public class TripService {
     private MongoClient mongoClient;
 
     /**
-     * -@Autowired: Dependency injection for Spring CacheManager
+     * -@Autowired: Dependency injection for Spring CacheManager.
      * --Injects CacheManager bean configured in CacheConfig (Redis)
      * --Used for caching trip data as fallback when MongoDB is unavailable
      * --WithoutIT: cacheManager would be null;
@@ -60,7 +60,7 @@ public class TripService {
     private CacheManager cacheManager;
 
     /**
-     * -@Autowired: Dependency injection for Resilience4j CircuitBreakerRegistry
+     * -@Autowired: Dependency injection for Resilience4j CircuitBreakerRegistry.
      * --Injects CircuitBreakerRegistry to create circuit breaker instances
      * --Registry manages all circuit breakers in the application
      * --WithoutIT: circuitBreakerRegistry would be null;
@@ -72,7 +72,7 @@ public class TripService {
     private CircuitBreaker circuitBreaker;
 
     /**
-     * -@PostConstruct: Lifecycle callback executed after dependency injection
+     * -@PostConstruct: Lifecycle callback executed after dependency injection.
      * --Called automatically after all [@Autowired] dependencies are injected
      * --Runs once during bean initialization, before the bean is put into service
      * --Ideal for initialization logic that requires injected dependencies

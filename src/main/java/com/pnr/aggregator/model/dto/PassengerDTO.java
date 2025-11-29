@@ -6,7 +6,7 @@ import lombok.Data;
 import java.util.List;
 
 /**
- * -@Data: Lombok annotation for getter/setter generation
+ * -@Data: Lombok annotation for getter/setter generation.
  * --Auto-generates getters and setters for all fields
  * --Creates equals(), hashCode(), and toString() methods
  * --Simplifies DTO development

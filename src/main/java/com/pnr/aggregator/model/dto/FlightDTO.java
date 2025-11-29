@@ -6,7 +6,7 @@ import lombok.Data;
 import java.util.List;
 
 /**
- * -@Data: Lombok annotation for boilerplate reduction
+ * -@Data: Lombok annotation for boilerplate reduction.
  * --Generates getters/setters automatically
  * --Provides equals(), hashCode(), and toString()
  * --Clean DTO class definition

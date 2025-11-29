@@ -42,7 +42,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * ERROR HANDLING: Catches IOException during broadcast, continues with other sessions
  */
 /**
- * -@Component: Marks this class as a Spring component
+ * -@Component: Marks this class as a Spring component.
  * --Registers this as a Spring-managed bean
  * --Makes it available for dependency injection
  * --Discovered during component scanning
@@ -67,7 +67,7 @@ public class PNRWebSocketHandler extends TextWebSocketHandler {
     private EventBus eventBus;
 
     /**
-     * -@PostConstruct: Initialization method executed after dependency injection
+     * -@PostConstruct: Initialization method executed after dependency injection.
      * --Runs automatically after [@Autowired] fields are populated
      * --Executes once during bean lifecycle, before handling requests
      * --Subscribes to "pnr.fetched" topic on event bus

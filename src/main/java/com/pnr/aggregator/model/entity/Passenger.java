@@ -3,7 +3,7 @@ package com.pnr.aggregator.model.entity;
 import lombok.Data;
 
 /**
- * -@Data: Lombok annotation for boilerplate code generation
+ * -@Data: Lombok annotation for boilerplate code generation.
  * --Auto-generates getters: getFirstName(), getMiddleName(), getLastName(),
  * etc.
  * --Auto-generates setters: setFirstName(), setMiddleName(), setLastName(),
