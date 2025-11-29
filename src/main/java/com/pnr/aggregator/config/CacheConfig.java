@@ -29,13 +29,13 @@ public class CacheConfig {
 
         /**
          * -@Bean: Marks this method as a bean producer - Spring will manage the.
-         * returned object.
-         * Configures Redis as the cache manager with the following settings:
-         * --Cache entries expire after 10 minutes
-         * --Keys are serialized as strings
-         * --Values are serialized as JSON using Jackson
-         * --Null values are not cached
-         * --Cache operations participate in ongoing transactions
+         * --returned object.
+         * --Configures Redis as the cache manager with the following settings:
+         * ---Cache entries expire after 10 minutes
+         * ---Keys are serialized as strings
+         * ---Values are serialized as JSON using Jackson
+         * ---Null values are not cached
+         * ---Cache operations participate in ongoing transactions
          * --WithoutIT: No cache manager available;
          * ---fallback data storage for circuit breakers would fail.
          */
