@@ -13,6 +13,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * -@Configuration: Marks this class as a Spring configuration class
  * --Indicates this class contains configuration methods for the application
  * --Enables Spring to process this class and apply web configurations
+ * ----WithoutIT:: Spring won't recognize this as a configuration class; CORS
+ * settings won't be applied, and browsers will block cross-origin requests.
  */
 @Configuration
 public class WebConfig implements WebMvcConfigurer {

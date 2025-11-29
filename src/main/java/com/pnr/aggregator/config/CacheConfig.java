@@ -15,9 +15,13 @@ import java.time.Duration;
 
 /**
  * -@Configuration: Indicates this class contains Spring bean definitions
+ * --WithoutIT: Spring won't process [@Bean] methods;
+ * cache manager won't be configured, breaking caching functionality.
  * =========
  * -@EnableCaching: Enables Spring's annotation-driven cache management
  * capability
+ * --WithoutIT: All cache operations would be no-ops;
+ * fallback caching for circuit breakers wouldn't work.
  */
 @Configuration
 @EnableCaching
@@ -32,6 +36,8 @@ public class CacheConfig {
          * --Values are serialized as JSON using Jackson
          * --Null values are not cached
          * --Cache operations participate in ongoing transactions
+         * --WithoutIT: No cache manager available;
+         * fallback data storage for circuit breakers would fail.
          */
         @Bean
         public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {

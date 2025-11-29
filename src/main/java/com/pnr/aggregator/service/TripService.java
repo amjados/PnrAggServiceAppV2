@@ -26,10 +26,14 @@ import java.util.List;
  * -@Service: Marks this class as a Spring service component
  * --Registers this class as a Spring bean for dependency injection
  * --Contains business logic for trip data retrieval
+ * --WithoutIT: Service won't be discovered;
+ * trip data retrieval would be unavailable.
  * =========
  * -@Slf4j: Lombok annotation for automatic logger creation
  * --Generates: private static final Logger log =
  * LoggerFactory.getLogger(TripService.class)
+ * --WithoutIT: No logger available;
+ * compilation errors on log statements.
  */
 @Service
 @Slf4j
@@ -39,6 +43,8 @@ public class TripService {
      * -@Autowired: Dependency injection for Vert.x MongoClient
      * --Injects MongoClient bean configured in VertxConfig
      * --Used for non-blocking MongoDB operations
+     * --WithoutIT: mongoClient would be null;
+     * all trip data queries would fail.
      */
     @Autowired
     private MongoClient mongoClient;
@@ -47,6 +53,8 @@ public class TripService {
      * -@Autowired: Dependency injection for Spring CacheManager
      * --Injects CacheManager bean configured in CacheConfig (Redis)
      * --Used for caching trip data as fallback when MongoDB is unavailable
+     * --WithoutIT: cacheManager would be null;
+     * fallback caching wouldn't work.
      */
     @Autowired
     private CacheManager cacheManager;
@@ -55,6 +63,8 @@ public class TripService {
      * -@Autowired: Dependency injection for Resilience4j CircuitBreakerRegistry
      * --Injects CircuitBreakerRegistry to create circuit breaker instances
      * --Registry manages all circuit breakers in the application
+     * --WithoutIT: circuitBreakerRegistry would be null;
+     * circuit breaker initialization would fail.
      */
     @Autowired
     private CircuitBreakerRegistry circuitBreakerRegistry;
@@ -63,10 +73,12 @@ public class TripService {
 
     /**
      * -@PostConstruct: Lifecycle callback executed after dependency injection
-     * --Called automatically after all @Autowired dependencies are injected
+     * --Called automatically after all [@Autowired] dependencies are injected
      * --Runs once during bean initialization, before the bean is put into service
      * --Ideal for initialization logic that requires injected dependencies
      * --Here: Initializes the circuit breaker instance from the registry
+     * --WithoutIT: init() won't be called automatically;
+     * circuit breaker would remain null.
      */
     @jakarta.annotation.PostConstruct
     public void init() {
@@ -101,7 +113,7 @@ public class TripService {
 
         // NoSQL Injection Prevention: Use parameterized query
         // JsonObject automatically escapes special characters
-        // PNR validated by controller (@Pattern) - only [A-Z0-9]{6} allowed
+        // PNR validated by controller ([@Pattern]) - only [A-Z0-9]{6} allowed
         JsonObject query = new JsonObject().put("bookingReference", pnr);
 
         mongoClient.findOne("trips", query, null, ar -> {

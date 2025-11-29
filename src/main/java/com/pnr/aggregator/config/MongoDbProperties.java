@@ -29,16 +29,24 @@ import org.springframework.stereotype.Component;
  * --Reduces code verbosity by eliminating getter/setter boilerplate
  * =========
  * -@Component: Registers this class as a Spring component
+ * --WithoutIT: This class won't be a Spring bean;
+ * =========
+ * -@Autowired injection of MongoDbProperties would fail.
  * --Makes this class a Spring-managed bean
- * --Enables @Autowired injection in other classes
+ * --Enables [@Autowired] injection in other classes
  * --Discovered during component scanning
  * =========
- * -@ConfigurationProperties: Binds external configuration to this class
- * --Maps properties with prefix "spring.data.mongodb" to class fields
+ * -@ConfigurationProperties: Binds external configuration to this
+ * class
+ * --Maps properties with prefix "spring.data.mongodb" to class
+ * fields
  * --Example: spring.data.mongodb.host -> setHost() is called
- * --Provides type-safe configuration instead of using @Value for each property
+ * --Provides type-safe configuration instead of using [@Value] for
+ * each property
  * --Values can come from application.yml, application.properties, or
  * environment variables
+ * --WithoutIT: Properties from application.yml won't be loaded;
+ * MongoDB connection would use only hardcoded defaults.
  */
 @Data
 @Component

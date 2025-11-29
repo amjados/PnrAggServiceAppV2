@@ -4,9 +4,10 @@ package com.pnr.aggregator.exception;
  * Custom exception for PNR (Passenger Name Record) not found scenarios
  *
  * EXTENDS RuntimeException:
- * - RuntimeException is an unchecked exception (doesn't require try-catch or throws declaration)
+ * - RuntimeException is an unchecked exception (doesn't require try-catch or
+ * throws declaration)
  * - Propagates up the call stack automatically
- * - Spring handles it gracefully in @RestController methods
+ * - Spring handles it gracefully in [@RestController] methods
  *
  * WHEN THROWN:
  * - TripService throws this when PNR doesn't exist in MongoDB

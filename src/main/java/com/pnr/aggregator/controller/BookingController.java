@@ -17,21 +17,28 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * -@RestController: Combines @Controller and @ResponseBody
+ * -@RestController: Combines [@Controller] and [@ResponseBody]
  * --Marks this class as a Spring MVC controller that handles HTTP requests
- * --Automatically serializes return values to JSON (no need for @ResponseBody
+ * --Automatically serializes return values to JSON (no need for [@ResponseBody]
  * on each method)
+ * --WithoutIT: This class won't handle HTTP requests;
+ * all API endpoints would return 404 Not Found.
  * =========
  * -@RequestMapping("/booking"): Maps HTTP requests to handler methods
  * --All methods in this controller will handle requests starting with /booking
  * --Example: /booking/ABC123 will be handled by methods with additional path
  * mappings
+ * --WithoutIT: Endpoints wouldn't have the /booking prefix;
+ * URLs would need to change, breaking API compatibility.
  * =========
  * -@Validated: Enables method parameter validation using Jakarta Validation
  * (JSR-380)
- * --Validates method parameters annotated with @Pattern, @NotNull, @Size, etc.
+ * --Validates method parameters annotated with [@Pattern], [@NotNull], [@Size],
+ * etc.
  * --If validation fails, throws ConstraintViolationException (handled
- * by @ExceptionHandler)
+ * by [@ExceptionHandler])
+ * --WithoutIT: [@Pattern] validation on parameters wouldn't work;
+ * invalid PNR formats could reach the service layer, risking injection attacks.
  * =========
  * -@Slf4j: Lombok annotation that generates a SLF4J Logger field
  * --Creates a private static final Logger log =
@@ -50,6 +57,8 @@ public class BookingController {
      * --Spring automatically injects an instance of BookingAggregatorService
      * --Finds the bean by type from the application context
      * --No need for manual instantiation or constructor injection
+     * --WithoutIT: aggregatorService would be null;
+     * all API calls would fail with NullPointerException.
      */
     @Autowired
     private BookingAggregatorService aggregatorService;
@@ -57,37 +66,44 @@ public class BookingController {
     /**
      * Get booking by PNR
      * 
-     * @param pnr Passenger Name Record (6 alphanumeric characters)
-     *            Format: ^[A-Z0-9]{6}$ (uppercase letters and digits only)
-     *            Examples: GHTW42, ABC123
-     * @return Booking details with trip, baggage, and ticket information
+     * -@param pnr Passenger Name Record (6 alphanumeric characters)
+     * Format: ^[A-Z0-9]{6}$ (uppercase letters and digits only)
+     * Examples: GHTW42, ABC123
+     * -@return Booking details with trip, baggage, and ticket information
      * 
-     *         Input Validation:
-     *         - PNR must be exactly 6 characters
-     *         - Only uppercase letters (A-Z) and digits (0-9) allowed
-     *         - Prevents injection attacks by restricting character set
-     *         - Sanitizes input before database queries
+     * Input Validation:
+     * - PNR must be exactly 6 characters
+     * - Only uppercase letters (A-Z) and digits (0-9) allowed
+     * - Prevents injection attacks by restricting character set
+     * - Sanitizes input before database queries
      */
     /**
      * -@GetMapping("/{pnr}"): Maps HTTP GET requests to this method
      * --Handles GET requests to /booking/{pnr} (e.g., /booking/ABC123)
      * --{pnr} is a path variable that will be extracted from the URL
-     * --Shorthand for @RequestMapping(value = "/{pnr}", method = RequestMethod.GET)
+     * --Shorthand for [@RequestMapping](value = "/{pnr}", method =
+     * RequestMethod.GET)
+     * --WithoutIT: This method wouldn't handle GET requests;
+     * API endpoint /booking/{pnr} would return 404.
      */
     @GetMapping("/{pnr}")
     public CompletableFuture<ResponseEntity<?>> getBooking(
             /**
              * -@PathVariable: Extracts value from URI path
              * --Binds the {pnr} placeholder in the URL to the method
-             *   parameter
+             * parameter
              * --Example: /booking/ABC123 -> pnr = "ABC123"
-             *
+             * --WithoutIT: pnr parameter would be null;
+             * method couldn't access the PNR from the URL.
+             * =========
              * -@Pattern: Jakarta Validation constraint for regex matching
              * --Validates that pnr matches ^[A-Z0-9]{6}$ (exactly 6 uppercase
-             *   alphanumeric characters)
+             * alphanumeric characters)
              * --If validation fails, throws ConstraintViolationException
              * --Prevents SQL/NoSQL injection by restricting input to safe
-             *   characters
+             * characters
+             * --WithoutIT: Invalid PNR formats could pass through;
+             * potentially allowing injection attacks or malformed data.
              */
             @PathVariable @Pattern(regexp = "^[A-Z0-9]{6}$", message = "PNR must be exactly 6 alphanumeric characters (A-Z, 0-9)") String pnr) {
         log.info("Received request for PNR: {}", pnr);
@@ -133,12 +149,12 @@ public class BookingController {
      *
      * -@ExceptionHandler: Defines exception handling method for this controller
      * --Catches ConstraintViolationException thrown
-     *   by @Validated parameters
+     * by [@Validated] parameters
      * --Only handles exceptions from methods in this controller
      * --Allows custom error responses instead of default Spring
-     *   error page
+     * error page
      * --Returns HTTP 400 (Bad Request) with user-friendly error
-     *   message
+     * message
      */
     @ExceptionHandler(jakarta.validation.ConstraintViolationException.class)
     public ResponseEntity<?> handleValidationException(jakarta.validation.ConstraintViolationException ex) {

@@ -47,6 +47,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * --Makes it available for dependency injection
  * --Discovered during component scanning
  * --Used in WebSocketConfig to register the handler
+ * --WithoutIT: Handler won't be discovered;
+ * WebSocket endpoints wouldn't work.
  */
 @Component
 public class PNRWebSocketHandler extends TextWebSocketHandler {
@@ -58,16 +60,20 @@ public class PNRWebSocketHandler extends TextWebSocketHandler {
      * --Injects EventBus configured in VertxConfig
      * --Enables subscription to PNR events
      * --Bridges Vert.x event bus with WebSocket communication
+     * --WithoutIT: eventBus would be null;
+     * real-time updates wouldn't be broadcast to clients.
      */
     @Autowired
     private EventBus eventBus;
 
     /**
      * -@PostConstruct: Initialization method executed after dependency injection
-     * --Runs automatically after @Autowired fields are populated
+     * --Runs automatically after [@Autowired] fields are populated
      * --Executes once during bean lifecycle, before handling requests
      * --Subscribes to "pnr.fetched" topic on event bus
      * --Ensures consumer is ready when application starts
+     * --WithoutIT: init() won't be called automatically;
+     * event bus consumer wouldn't be registered, no real-time updates.
      */
     @PostConstruct
     public void init() {
@@ -99,7 +105,7 @@ public class PNRWebSocketHandler extends TextWebSocketHandler {
      * Broadcasts a message to all active WebSocket sessions
      * Skips closed sessions and handles IOException gracefully
      * 
-     * @param message JSON string to broadcast
+     * -@param message JSON string to broadcast
      */
     private void broadcast(String message) {
         sessions.forEach(session -> {

@@ -23,12 +23,16 @@ import java.util.stream.Collectors;
  * injection
  * --Registered as a bean in the Spring application context
  * --Can be autowired into other components (like controllers)
+ * --WithoutIT: This class won't be discovered during component scanning;
+ * dependency injection would fail for this service.
  * =========
  * -@Slf4j: Lombok annotation that generates a SLF4J Logger field
  * --Auto-creates: private static final Logger log =
  * LoggerFactory.getLogger(BookingAggregatorService.class)
  * --Enables logging with log.info(), log.error(), log.debug() without
  * manual logger creation
+ * --WithoutIT: No logger would be available;
+ * compilation would fail on log.info() calls.
  */
 @Service
 @Slf4j
@@ -38,6 +42,8 @@ public class BookingAggregatorService {
      * -@Autowired: Dependency injection for TripService
      * --Spring automatically injects the TripService bean instance
      * --No manual instantiation needed
+     * --WithoutIT: tripService would be null;
+     * NullPointerException when calling tripService methods.
      */
     @Autowired
     private TripService tripService;
@@ -45,6 +51,8 @@ public class BookingAggregatorService {
     /**
      * -@Autowired: Dependency injection for BaggageService
      * --Spring automatically injects the BaggageService bean instance
+     * --WithoutIT: baggageService would be null;
+     * NullPointerException when fetching baggage data.
      */
     @Autowired
     private BaggageService baggageService;
@@ -52,6 +60,8 @@ public class BookingAggregatorService {
     /**
      * -@Autowired: Dependency injection for TicketService
      * --Spring automatically injects the TicketService bean instance
+     * --WithoutIT: ticketService would be null;
+     * NullPointerException when fetching ticket data.
      */
     @Autowired
     private TicketService ticketService;
@@ -60,6 +70,8 @@ public class BookingAggregatorService {
      * -@Autowired: Dependency injection for Vert.x instance
      * --Vert.x is configured in VertxConfig and injected here
      * --Used for event bus communication and async operations
+     * --WithoutIT: vertx would be null;
+     * event broadcasting to WebSocket clients would fail.
      */
     @Autowired
     private Vertx vertx;
@@ -108,10 +120,10 @@ public class BookingAggregatorService {
      * 2. Setting passenger-level fallback messages from Baggage and Ticket services
      * 3. Setting flight-level fallback messages (if trip from cache)
      * 
-     * @param trip          Trip data (may be from cache)
-     * @param baggage       Baggage data (may be default allowance)
-     * @param ticketFutures Ticket futures for all passengers
-     * @return Complete BookingResponse with appropriate fallback messages
+     * -@param trip Trip data (may be from cache)
+     * -@param baggage Baggage data (may be default allowance)
+     * -@param ticketFutures Ticket futures for all passengers
+     * -@return Complete BookingResponse with appropriate fallback messages
      */
     private BookingResponse mergeData(Trip trip, Baggage baggage,
             List<Future<Ticket>> ticketFutures) {

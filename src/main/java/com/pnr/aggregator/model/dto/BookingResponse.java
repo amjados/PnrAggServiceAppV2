@@ -33,6 +33,9 @@ public class BookingResponse {
      * --Only includes this field in JSON output if value is not null
      * --Keeps JSON response clean by omitting null fields
      * --Example: pnrFallbackMsg only appears when fallback occurs
+     * --WithoutIT: pnrFallbackMsg field would always be included in JSON even when
+     * null;
+     * cluttering the response with empty/null fields.
      */
     @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
     private List<String> pnrFallbackMsg;

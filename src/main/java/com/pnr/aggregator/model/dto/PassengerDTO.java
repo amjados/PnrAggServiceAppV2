@@ -16,6 +16,8 @@ import java.util.List;
  * --Only includes non-null fields in JSON output
  * --Reduces JSON payload size by excluding null/empty values
  * --Example: ticketUrl only appears if passenger has a ticket
+ * --WithoutIT: All fields would be serialized to JSON even when null;
+ * increasing payload size and cluttering the response.
  */
 @Data
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -36,7 +38,8 @@ public class PassengerDTO {
      * Contains errors/fallback reasons from:
      * - Baggage service (default allowance used)
      * - Ticket service (ticket unavailable)
-     * Only included in JSON when fallback occurred (@JsonInclude.NON_NULL at class
+     * Only included in JSON when fallback occurred ([@JsonInclude].NON_NULL at
+     * class
      * level)
      */
     private List<String> passengerFallbackMsg;

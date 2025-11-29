@@ -15,6 +15,8 @@ import java.util.List;
  * --Only serializes non-null fields to JSON
  * --Omits null fields from API response
  * --Cleaner JSON output for clients
+ * --WithoutIT: Null fields would be included in JSON response;
+ * increasing response size and reducing readability.
  */
 @Data
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -28,7 +30,8 @@ public class FlightDTO {
     /**
      * Fallback messages specific to this flight
      * Contains warnings when flight data is from cache (MongoDB unavailable)
-     * Only included in JSON when fallback occurred (@JsonInclude.NON_NULL at class
+     * Only included in JSON when fallback occurred ([@JsonInclude].NON_NULL at
+     * class
      * level)
      */
     private List<String> flightFallbackMsg;
