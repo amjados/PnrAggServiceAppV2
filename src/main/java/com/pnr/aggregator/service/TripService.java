@@ -7,9 +7,10 @@ import com.pnr.aggregator.model.entity.Passenger;
 import com.pnr.aggregator.model.entity.Trip;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.eventbus.EventBus;
+//import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
@@ -33,8 +34,6 @@ import java.util.List;
  * -@Slf4j: Lombok annotation for automatic logger creation
  * --Generates: private static final Logger log =
  * LoggerFactory.getLogger(TripService.class)
- * --WithoutIT: No logger available;
- * ---compilation errors on log statements.
  */
 @Service
 @Slf4j
@@ -108,32 +107,10 @@ public class TripService {
     }
 
     /**
-     * Get trip information with circuit breaker protection
-     * 
-     * Circuit Breaker Config:
-     * - Name: tripServiceCB
-     * - Fallback: getTripFallback (returns cached data)
-     * - Opens after: 10% failure rate over 10 calls
-     * - Waits: 10 seconds before testing recovery
-     * 
-     * Note: Caching handled manually in fallback to avoid serializing Future
-     * objects
+     * Handle MongoDB query result for trip retrieval
      */
-    public Future<Trip> getTripInfo(String pnr) {
-        log.info("[CB-BEFORE] TripService call for PNR: {} | State: {}", pnr, circuitBreaker.getState());
-
-        // Check if circuit is open
-        if (!circuitBreaker.tryAcquirePermission()) {
-            log.warn("[CB-REJECTED] Circuit is OPEN - calling fallback for PNR: {}", pnr);
-            return getTripFallback(pnr, new Exception("Circuit breaker is OPEN"));
-        }
-
-        long start = System.nanoTime();
-        Promise<Trip> promise = Promise.promise();
-
-        JsonObject query = new JsonObject().put("bookingReference", pnr);
-
-        mongoClient.findOne("trips", query, null, ar -> {
+    private Promise<Trip> onTripResult(AsyncResult<JsonObject> ar, String pnr, long start, Promise<Trip> promise) {
+        {
             long duration = System.nanoTime() - start;
 
             if (ar.succeeded()) {
@@ -167,7 +144,37 @@ public class TripService {
                     }
                 });
             }
-        });
+        }
+        return promise;
+    }
+
+    /**
+     * Get trip information with circuit breaker protection
+     * 
+     * Circuit Breaker Config:
+     * - Name: tripServiceCB
+     * - Fallback: getTripFallback (returns cached data)
+     * - Opens after: 10% failure rate over 10 calls
+     * - Waits: 10 seconds before testing recovery
+     * 
+     * Note: Caching handled manually in fallback to avoid serializing Future
+     * objects
+     */
+    public Future<Trip> getTripInfo(String pnr) {
+        log.info("[CB-BEFORE] TripService call for PNR: {} | State: {}", pnr, circuitBreaker.getState());
+
+        // Check if circuit is open
+        if (!circuitBreaker.tryAcquirePermission()) {
+            log.warn("[CB-REJECTED] Circuit is OPEN - calling fallback for PNR: {}", pnr);
+            return getTripFallback(pnr, new Exception("Circuit breaker is OPEN"));
+        }
+
+        long start = System.nanoTime();
+        Promise<Trip> promise = Promise.promise();
+
+        JsonObject query = new JsonObject().put("bookingReference", pnr);
+
+        mongoClient.findOne("trips", query, null, ar -> onTripResult(ar, pnr, start, promise));
 
         return promise.future();
     }

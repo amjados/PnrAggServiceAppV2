@@ -3,6 +3,7 @@ package com.pnr.aggregator.service;
 import com.pnr.aggregator.model.entity.Ticket;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
@@ -74,6 +75,47 @@ public class TicketService {
     }
 
     /**
+     * Handle MongoDB query result for ticket retrieval
+     */
+    private Promise<Ticket> onTicketResult(AsyncResult<JsonObject> ar, String pnr, long start, int passengerNumber,
+            Promise<Ticket> promise) {
+        {
+            long duration = System.nanoTime() - start;
+
+            if (ar.succeeded()) {
+                if (ar.result() == null) {
+                    // IMPORTANT: Missing ticket is NOT a circuit breaker failure
+                    // Some passengers legitimately don't have tickets
+                    log.debug("No ticket found for PNR: {}, Passenger: {}", pnr, passengerNumber);
+
+                    circuitBreaker.onSuccess(duration, java.util.concurrent.TimeUnit.NANOSECONDS);
+
+                    promise.fail(new RuntimeException("Ticket not found"));
+
+                } else {
+                    Ticket ticket = mapToTicket(ar.result());
+                    circuitBreaker.onSuccess(duration, java.util.concurrent.TimeUnit.NANOSECONDS);
+                    promise.complete(ticket);
+                    log.info("Ticket fetched successfully for PNR: {}, Passenger: {}", pnr, passengerNumber);
+                }
+            } else {
+                log.error("MongoDB error fetching ticket for PNR: {}, Passenger: {}", pnr, passengerNumber, ar.cause());
+                circuitBreaker.onError(duration, java.util.concurrent.TimeUnit.NANOSECONDS, ar.cause());
+
+                // Use fallback
+                getTicketFallback(pnr, passengerNumber, new Exception(ar.cause())).onComplete(fallbackResult -> {
+                    if (fallbackResult.succeeded()) {
+                        promise.complete(fallbackResult.result());
+                    } else {
+                        promise.fail(fallbackResult.cause());
+                    }
+                });
+            }
+        }
+        return promise;
+    }
+
+    /**
      * Fetch ticket info from MongoDB by PNR and passenger number
      * 
      * Circuit Breaker protects against MongoDB failures
@@ -106,36 +148,7 @@ public class TicketService {
                 .put("bookingReference", pnr)
                 .put("passengerNumber", passengerNumber);
 
-        mongoClient.findOne("tickets", query, null, ar -> {
-            long duration = System.nanoTime() - start;
-
-            if (ar.succeeded()) {
-                if (ar.result() == null) {
-                    // IMPORTANT: Missing ticket is NOT a circuit breaker failure
-                    // Some passengers legitimately don't have tickets
-                    log.debug("No ticket found for PNR: {}, Passenger: {}", pnr, passengerNumber);
-                    circuitBreaker.onSuccess(duration, java.util.concurrent.TimeUnit.NANOSECONDS);
-                    promise.fail(new RuntimeException("Ticket not found"));
-                } else {
-                    Ticket ticket = mapToTicket(ar.result());
-                    circuitBreaker.onSuccess(duration, java.util.concurrent.TimeUnit.NANOSECONDS);
-                    promise.complete(ticket);
-                    log.info("Ticket fetched successfully for PNR: {}, Passenger: {}", pnr, passengerNumber);
-                }
-            } else {
-                log.error("MongoDB error fetching ticket for PNR: {}, Passenger: {}", pnr, passengerNumber, ar.cause());
-                circuitBreaker.onError(duration, java.util.concurrent.TimeUnit.NANOSECONDS, ar.cause());
-
-                // Use fallback
-                getTicketFallback(pnr, passengerNumber, new Exception(ar.cause())).onComplete(fallbackResult -> {
-                    if (fallbackResult.succeeded()) {
-                        promise.complete(fallbackResult.result());
-                    } else {
-                        promise.fail(fallbackResult.cause());
-                    }
-                });
-            }
-        });
+        mongoClient.findOne("tickets", query, null, ar -> onTicketResult(ar, pnr, start, passengerNumber, promise));
 
         return promise.future();
     }

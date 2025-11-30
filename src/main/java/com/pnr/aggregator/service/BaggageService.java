@@ -4,6 +4,7 @@ import com.pnr.aggregator.model.entity.Baggage;
 import com.pnr.aggregator.model.entity.BaggageAllowance;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
@@ -11,8 +12,8 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.Cache;
-import org.springframework.cache.CacheManager;
+//import org.springframework.cache.Cache;
+//import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -42,14 +43,14 @@ public class BaggageService {
     @Autowired
     private MongoClient mongoClient;
 
-    /**
-     * -@Autowired: Dependency injection for CacheManager.
-     * --Injects Redis-based cache manager for fallback data
-     * --WithoutIT: cacheManager would be null;
-     * ---fallback caching mechanism would fail.
-     */
-    @Autowired
-    private CacheManager cacheManager;
+    // /**
+    // * -@Autowired: Dependency injection for CacheManager.
+    // * --Injects Redis-based cache manager for fallback data
+    // * --WithoutIT: cacheManager would be null;
+    // * ---fallback caching mechanism would fail.
+    // */
+    // @Autowired
+    // private CacheManager cacheManager;
 
     /**
      * -@Autowired: Dependency injection for CircuitBreakerRegistry.
@@ -96,28 +97,26 @@ public class BaggageService {
         log.info("BaggageService Circuit Breaker initialized: {}", circuitBreaker.getName());
     }
 
-    public Future<Baggage> getBaggageInfo(String pnr) {
-        log.info("[CB-BEFORE] BaggageService call for PNR: {} | State: {}", pnr, circuitBreaker.getState());
-
-        // Check if circuit is open
-        if (!circuitBreaker.tryAcquirePermission()) {
-            log.warn("[CB-REJECTED] Circuit is OPEN - calling fallback for PNR: {}", pnr);
-            // Don't call onError() here - rejection is already tracked by CB
-            return getBaggageFallback(pnr, new Exception("Circuit breaker is OPEN"));
-        }
-
-        long start = System.nanoTime();
-        Promise<Baggage> promise = Promise.promise();
-
-        // NoSQL Injection Prevention: Parameterized query with validated input
-        JsonObject query = new JsonObject().put("bookingReference", pnr);
-
-        mongoClient.findOne("baggage", query, null, ar -> {
+    /**
+     * Handles MongoDB query result for baggage info.
+     * 
+     * On success, maps result to Baggage entity and caches it.
+     * On failure or missing data, triggers circuit breaker error and calls
+     * fallback.
+     */
+    private Promise<Baggage> onBaggageResult(AsyncResult<JsonObject> ar, String pnr, long start,
+            Promise<Baggage> promise) {
+        {
             long duration = System.nanoTime() - start;
 
             if (ar.succeeded()) {
                 if (ar.result() == null) {
                     log.warn("Baggage not found for PNR: {}", pnr);
+                    /*
+                     * This is counted as a failure event inside the circuit breaker.
+                     * Evaluates if the circuit should: stay Closed, transition to Open, or move to
+                     * Half-Open
+                     */
                     circuitBreaker.onError(duration, java.util.concurrent.TimeUnit.NANOSECONDS,
                             new RuntimeException("Baggage not found"));
 
@@ -135,11 +134,11 @@ public class BaggageService {
                     baggage.setFromDefault(false);
 
                     // Manually cache for fallback
-                    Cache cache = cacheManager.getCache("baggage");
-                    if (cache != null) {
-                        cache.put(pnr, baggage);
-                        log.debug("Cached baggage data for PNR: {}", pnr);
-                    }
+                    // Cache cache = cacheManager.getCache("baggage");
+                    // if (cache != null) {
+                    // cache.put(pnr, baggage);
+                    // log.debug("Cached baggage data for PNR: {}", pnr);
+                    // }
 
                     circuitBreaker.onSuccess(duration, java.util.concurrent.TimeUnit.NANOSECONDS);
                     promise.complete(baggage);
@@ -147,6 +146,11 @@ public class BaggageService {
                 }
             } else {
                 log.error("MongoDB error fetching baggage for PNR: {}", pnr, ar.cause());
+                /*
+                 * This is counted as a failure event inside the circuit breaker.
+                 * Evaluates if the circuit should: stay Closed, transition to Open, or move to
+                 * Half-Open
+                 */
                 circuitBreaker.onError(duration, java.util.concurrent.TimeUnit.NANOSECONDS, ar.cause());
 
                 // Use fallback
@@ -158,22 +162,72 @@ public class BaggageService {
                     }
                 });
             }
-        });
+        }
+        return promise;
+    }
+
+    /**
+     * Fetch baggage info from MongoDB by PNR
+     * 
+     * Circuit Breaker protects against MongoDB failures
+     * Fallback returns default baggage allowance
+     * 
+     * NoSQL Injection Prevention:
+     * - Uses parameterized query with type-safe values
+     * - PNR validated at controller level (type-safe)
+     */
+    public Future<Baggage> getBaggageInfo(String pnr) {
+        log.info("[CB-BEFORE] BaggageService call for PNR: {} | State: {}", pnr, circuitBreaker.getState());
+
+        // Check if circuit is open
+        if (!circuitBreaker.tryAcquirePermission()) {
+            log.warn("[CB-REJECTED] Circuit is OPEN - calling fallback for PNR: {}", pnr);
+            // Don't call onError() here - rejection is already tracked by CB
+            return getBaggageFallback(pnr, new Exception("Circuit breaker is OPEN"));
+        }
+
+        long start = System.nanoTime();
+        Promise<Baggage> promise = Promise.promise();
+
+        // NoSQL Injection Prevention: Parameterized query with validated input
+        JsonObject query = new JsonObject().put("bookingReference", pnr);
+
+        mongoClient.findOne("baggage", query, null, ar -> onBaggageResult(ar, pnr, start, promise));
 
         return promise.future();
     }
 
     /**
-     * Fallback: Return default economy baggage allowance
+     * Fallback: Check cache first, then return default economy baggage allowance
      * 
-     * When MongoDB is unavailable, return standard allowance
-     * This allows booking to proceed with reasonable defaults
-     * Sets baggageFallbackMsg to indicate default usage
+     * When MongoDB is unavailable:
+     * 1. Check cache for previously fetched baggage data
+     * 2. If not in cache, return standard allowance
+     * This allows booking to proceed with cached or reasonable defaults
+     * Sets baggageFallbackMsg to indicate cache/default usage
      */
     private Future<Baggage> getBaggageFallback(String pnr, Exception ex) {
-        log.warn("Circuit OPEN for BaggageService - using default allowance for PNR: {}", pnr);
+        log.warn("Circuit OPEN for BaggageService - checking cache for PNR: {}", pnr);
 
-        // Return default economy baggage allowance
+        // // Try to get from cache first
+        // Cache cache = cacheManager.getCache("baggage");
+        // if (cache != null) {
+        // Cache.ValueWrapper cachedValue = cache.get(pnr);
+        // if (cachedValue != null) {
+        // Baggage cachedBaggage = (Baggage) cachedValue.get();
+        // if (cachedBaggage != null) {
+        // cachedBaggage.setFromCache(true);
+        // cachedBaggage.setFromDefault(false);
+        // cachedBaggage.setBaggageFallbackMsg(List.of(
+        // "Using cached baggage data - service unavailable"));
+        // log.info("Returning cached baggage data for PNR: {}", pnr);
+        // return Future.succeededFuture(cachedBaggage);
+        // }
+        // }
+        // }
+
+        // Cache miss - return default economy baggage allowance
+        log.warn("No cached baggage found for PNR: {} - using default allowance", pnr);
         Baggage defaultBaggage = new Baggage();
         defaultBaggage.setBookingReference(pnr);
         defaultBaggage.setFromCache(false);

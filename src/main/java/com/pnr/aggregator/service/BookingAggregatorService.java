@@ -31,8 +31,6 @@ import java.util.stream.Collectors;
  * LoggerFactory.getLogger(BookingAggregatorService.class)
  * --Enables logging with log.info(), log.error(), log.debug() without
  * manual logger creation
- * --WithoutIT: No logger would be available;
- * ---compilation would fail on log.info() calls.
  */
 @Service
 @Slf4j
@@ -126,7 +124,7 @@ public class BookingAggregatorService {
      * -@return Complete BookingResponse with appropriate fallback messages
      */
     private BookingResponse mergeData(Trip trip, Baggage baggage,
-            List<Future<Ticket>> ticketFutures) {
+            List<Future<Ticket>> ticketFuturesList) {
         BookingResponse response = new BookingResponse();
         response.setPnr(trip.getBookingReference());
         response.setCabinClass(trip.getCabinClass());
@@ -160,7 +158,7 @@ public class BookingAggregatorService {
             dto.setCustomerId(p.getCustomerId());
 
             // Find matching ticket
-            Ticket ticket = ticketFutures.stream()
+            Ticket ticket = ticketFuturesList.stream()
                     .map(Future::result)
                     .filter(t -> t != null && t.getPassengerNumber() == p.getPassengerNumber())
                     .findFirst()

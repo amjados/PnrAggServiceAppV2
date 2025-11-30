@@ -36,18 +36,16 @@ import java.util.concurrent.ConcurrentHashMap;
  * ERROR HANDLING: Catches IOException during broadcast, continues with other sessions
  */
 /**
- * -@Component: Marks this class as a Spring component.
- * --Registers this as a Spring-managed bean
- * --Makes it available for dependency injection
- * --Discovered during component scanning
- * --Used in WebSocketConfig to register the handler
+ * -@Component: Marks this class as a Spring component. Registers this as a
+ * Spring-managed bean Makes it available for dependency injection Discovered
+ * during component scanning Used in WebSocketConfig to register the handler.
  * --WithoutIT: Handler won't be discovered;
  * ---WebSocket endpoints wouldn't work.
  */
 @Component
 public class PNRWebSocketHandler extends TextWebSocketHandler {
 
-    private final Set<WebSocketSession> sessions = ConcurrentHashMap.newKeySet();
+    private final Set<WebSocketSession> sessionsSet = ConcurrentHashMap.newKeySet();
 
     /**
      * -@Autowired: Dependency injection for Vert.x EventBus
@@ -64,7 +62,7 @@ public class PNRWebSocketHandler extends TextWebSocketHandler {
      * -@PostConstruct: Initialization method executed after dependency injection.
      * --Runs automatically after [@Autowired] fields are populated
      * --Executes once during bean lifecycle, before handling requests
-    * --Subscribes to "pnr.fetched" topic on event bus
+     * --Subscribes to "pnr.fetched" topic on event bus
      * --Ensures consumers are ready when application starts
      * --WithoutIT: init() won't be called automatically;
      * ---event bus consumers wouldn't be registered, no real-time updates.
@@ -84,7 +82,7 @@ public class PNRWebSocketHandler extends TextWebSocketHandler {
      */
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
-        sessions.add(session);
+        sessionsSet.add(session);
     }
 
     /**
@@ -93,7 +91,7 @@ public class PNRWebSocketHandler extends TextWebSocketHandler {
      */
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-        sessions.remove(session);
+        sessionsSet.remove(session);
     }
 
     /**
@@ -103,7 +101,7 @@ public class PNRWebSocketHandler extends TextWebSocketHandler {
      * -@param message JSON string to broadcast
      */
     private void broadcast(String message) {
-        sessions.forEach(session -> {
+        sessionsSet.forEach(session -> {
             try {
                 if (session.isOpen()) {
                     session.sendMessage(new TextMessage(message));
