@@ -126,11 +126,13 @@
             Auto-generates Swagger UI and OpenAPI spec
             COMPATIBILITY NOTE: Version 2.x for Spring Boot 3.x (Jakarta namespace)
         -->
+        <!--
+        No @OpenAPIDefinition or Swagger annotations found in code. You're using external Swagger UI via Docker instead. 
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>2.2.0</version>
-        </dependency>
+        </dependency> -->
 
         <!-- Spring Validation - Bean Validation (JSR-380) for input validation -->
         <dependency>
