@@ -18,27 +18,32 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * -@RestController: Combines [@Controller] and [@ResponseBody].
- * --Marks this class as a Spring MVC controller that handles HTTP requests
+ * --[@Controller]: Marks a class as a Spring MVC controller that handles web
+ * requests. It tells Spring this class contains methods that should respond to
+ * HTTP requests.
+ * --[@ResponseBody]: Tells Spring to automatically serialize the method's
+ * return value directly into the HTTP response body (typically as JSON or XML),
+ * rather than looking for a view template.
  * --Automatically serializes return values to JSON (no need for [@ResponseBody]
  * on each method)
- * --WithoutIT: This class won't handle HTTP requests;
- * ---all API endpoints would return 404 Not Found.
+ * --WithoutIT: This class won't handle HTTP requests; all API endpoints would
+ * return 404 Not Found.
  * =========
  * -@RequestMapping("/booking"): Maps HTTP requests to handler methods
  * --All methods in this controller will handle requests starting with /booking
  * --Example: /booking/ABC123 will be handled by methods with additional path
  * mappings
- * --WithoutIT: Endpoints wouldn't have the /booking prefix;
- * ---URLs would need to change, breaking API compatibility.
+ * --WithoutIT: Endpoints wouldn't have the /booking prefix; URLs would need to
+ * change, breaking API compatibility.
  * =========
- * -@Validated: Enables method parameter validation using Jakarta Validation
- * (JSR-380).
+ * -@Validated: Enables method parameter validation using Jakarta Validation.
  * --Validates method parameters annotated with [@Pattern], [@NotNull], [@Size],
  * etc.
  * --If validation fails, throws ConstraintViolationException (handled
  * by [@ExceptionHandler])
  * --WithoutIT: [@Pattern] validation on parameters wouldn't work;
- * ---invalid PNR formats could reach the service layer, risking injection attacks.
+ * ---invalid PNR formats could reach the service layer, risking injection
+ * attacks.
  * =========
  * -@Slf4j: Lombok annotation that generates a SLF4J Logger field
  * --Creates a private static final Logger log =
@@ -53,7 +58,7 @@ import java.util.concurrent.CompletableFuture;
 public class BookingController {
 
     /**
-     * -@Autowired: Enables dependency injection.
+     * [@Autowired] Enables dependency injection.
      * --Spring automatically injects an instance of BookingAggregatorService
      * --Finds the bean by type from the application context
      * --No need for manual instantiation or constructor injection
@@ -66,10 +71,10 @@ public class BookingController {
     /**
      * Get booking by PNR
      * 
-     * -@param pnr Passenger Name Record (6 alphanumeric characters)
+     * [@param] pnr Passenger Name Record (6 alphanumeric characters)
      * Format: ^[A-Z0-9]{6}$ (uppercase letters and digits only)
      * Examples: GHTW42, ABC123
-     * -@return Booking details with trip, baggage, and ticket information
+     * [@return] Booking details with trip, baggage, and ticket information
      * 
      * Input Validation:
      * - PNR must be exactly 6 characters
@@ -89,14 +94,14 @@ public class BookingController {
     @GetMapping("/{pnr}")
     public CompletableFuture<ResponseEntity<?>> getBooking(
             /**
-             * -@PathVariable: Extracts value from URI path.
+             * [@PathVariable]: Extracts value from URI path.
              * --Binds the {pnr} placeholder in the URL to the method
              * parameter
              * --Example: /booking/ABC123 -> pnr = "ABC123"
              * --WithoutIT: pnr parameter would be null;
              * ---method couldn't access the PNR from the URL.
              * =========
-             * -@Pattern: Jakarta Validation constraint for regex matching.
+             * [@Pattern]: Jakarta Validation constraint for regex matching.
              * --Validates that pnr matches ^[A-Z0-9]{6}$ (exactly 6 uppercase
              * alphanumeric characters)
              * --If validation fails, throws ConstraintViolationException

@@ -41,6 +41,18 @@ public class WebConfig implements WebMvcConfigurer {
     @Value("${cors.max-age:3600}")
     private long maxAge;
 
+    /*
+     * It's a callback method from the Spring Framework:
+     * Called by: Spring's WebMvcConfigurationSupport class internally during
+     * application startup
+     * How: When Spring detects that WebConfig implements WebMvcConfigurer, it
+     * automatically invokes this method to configure CORS
+     * When: During the Spring Boot initialization phase, before the application is
+     * ready to accept requests
+     * This is part of Spring's template method pattern - you override the method,
+     * and the framework calls it at the appropriate time. You don't need to call it
+     * yourself.
+     */
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")

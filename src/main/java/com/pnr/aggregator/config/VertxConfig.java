@@ -15,14 +15,9 @@ import org.springframework.context.annotation.Configuration;
  * --Indicates this class contains [@Bean] definitions for the Spring container
  * --Processed by Spring to generate bean definitions and service requests
  * --Alternative to XML-based configuration
- * ----WithoutIT:: Spring won't recognize this as a configuration class;
- * -@Bean methods won't be processed, and Vert.x beans won't be available for
+ * --WithoutIT: Spring won't recognize this as a configuration class;
+ * -[@Bean] methods won't be processed, and Vert.x beans won't be available for
  * injection.
- * =========
- * Hardcoded in class: Worker pool size (40), event loop size (4), MongoDB
- * client config
- * Why: Vert.x-specific programmatic configuration, no Spring Boot auto-config
- * for Vert.x
  */
 @Configuration
 public class VertxConfig {
@@ -37,7 +32,7 @@ public class VertxConfig {
      * -@Autowired: Dependency injection for MongoDB properties.
      * --Injects MongoDbProperties configuration bean
      * --Contains MongoDB connection settings from application.properties
-     * ----WithoutIT:: mongoDbProperties would be null;
+     * --WithoutIT: mongoDbProperties would be null;
      * MongoDB connection would fail with NullPointerException.
      */
     @Autowired
@@ -49,7 +44,7 @@ public class VertxConfig {
      * --Bean name defaults to method name ("vertx")
      * --This Vert.x instance can be [@Autowired] into other components
      * --Configured with custom worker pool and event loop sizes
-     * ----WithoutIT:: Vert.x instance won't be available for dependency injection;
+     * --WithoutIT: Vert.x instance won't be available for dependency injection;
      * services trying to [@Autowire] Vertx will fail at startup.
      */
     @Bean
@@ -57,7 +52,25 @@ public class VertxConfig {
         VertxOptions options = new VertxOptions()
                 .setWorkerPoolSize(workerPoolSize)
                 .setEventLoopPoolSize(eventLoopPoolSize);
-
+        // This creates a Vert.x instance using those custom configurations.
+        // Starts Vert.x runtime (“Start the car engine.”)
+        /*
+         * This project doesn't use vertx.deployVerticle() because it's integrating
+         * Vert.x into a Spring Boot application rather than creating a standalone
+         * Vert.x application.
+         * Key reasons:
+         * Spring manages the lifecycle - Spring Boot's dependency injection container
+         * handles component initialization and lifecycle, not Vert.x verticles
+         * Direct bean injection - Components like BookingController and services are
+         * Spring beans that get the Vert.x instance injected directly via [@Autowired],
+         * so there's no need to deploy them as verticles
+         * Hybrid architecture - This is a Spring-first application that uses Vert.x as
+         * a library for its async capabilities (EventBus, non-blocking MongoDB client),
+         * not as a framework
+         * No verticle pattern needed - Verticles are self-contained deployment units
+         * with their own lifecycle. Here, Spring controllers and services already
+         * provide that structure.
+         */
         return Vertx.vertx(options);
     }
 
@@ -66,7 +79,7 @@ public class VertxConfig {
      * --EventBus enables publish-subscribe messaging between components
      * --Method parameter (Vertx vertx) is automatically injected by Spring
      * --Used for real-time event broadcasting (e.g., PNR fetch notifications)
-     * ----WithoutIT:: EventBus won't be available for injection;
+     * --WithoutIT: EventBus won't be available for injection;
      * real-time event broadcasting and WebSocket notifications would fail.
      */
     @Bean
@@ -79,7 +92,7 @@ public class VertxConfig {
      * --Provides non-blocking, asynchronous MongoDB client
      * --Configured with connection details from MongoDbProperties
      * --Shared client instance improves connection pooling and performance
-     * ----WithoutIT:: Services won't have access to MongoDB;
+     * --WithoutIT: Services won't have access to MongoDB;
      * all database queries would fail, breaking the entire application.
      */
     @Bean

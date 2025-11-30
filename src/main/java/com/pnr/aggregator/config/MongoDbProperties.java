@@ -26,11 +26,10 @@ import org.springframework.stereotype.Component;
  * =========
  * -@Component: Registers this class as a Spring component.
  * --WithoutIT: This class won't be a Spring bean.
- * =========
- * -@Autowired injection of MongoDbProperties would fail.
- * --Makes this class a Spring-managed bean
- * --Enables [@Autowired] injection in other classes
- * --Discovered during component scanning
+ * --[@Autowired] injection of MongoDbProperties would fail.
+ * ---Makes this class a Spring-managed bean
+ * ---Enables [@Autowired] injection in other classes
+ * ---Discovered during component scanning
  * =========
  * -@ConfigurationProperties: Binds external configuration to this.
  * class.

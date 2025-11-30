@@ -10,6 +10,12 @@ import java.util.List;
  * --Generates getters/setters for all fields
  * --Creates equals(), hashCode(), and toString() methods
  * --Essential for DTO (Data Transfer Object) classes
+ * The naming follows a common convention:
+ * 
+ * Response suffix: Used for objects that are directly returned from REST
+ * endpoints (like BookingController)
+ * DTO suffix: Used for nested data transfer objects that are components of a
+ * larger response
  */
 @Data
 public class BookingResponse {

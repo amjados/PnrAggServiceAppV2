@@ -41,8 +41,8 @@ public class CacheConfig {
         private long cacheTtlMinutes;
 
         /**
-         * -@Bean: Marks this method as a bean producer - Spring will manage the.
-         * --returned object.
+         * -@Bean: Marks this method as a bean producer - Spring will manage the
+         * returned object.
          * --Configures Redis as the cache manager with the following settings:
          * ---Cache entries expire after 10 minutes
          * ---Keys are serialized as strings
