@@ -34,7 +34,7 @@ import static org.mockito.Mockito.*;
  */
 /**
  * -[@ExtendWith](MockitoExtension.class): Integrates Mockito with JUnit 5.
- * --Enables Mockito annotations like [@Mock], [@InjectMocks], [@Spy]
+ * --Enables Mockito annotations like [@Mock], [@InjectMocks], etc.
  * --Initializes mocks before each test method automatically
  * --Validates mock usage after each test (detects unused stubs)
  * --Replaces the legacy [@RunWith](MockitoJUnitRunner.class) from JUnit 4

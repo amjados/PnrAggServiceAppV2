@@ -160,6 +160,75 @@ db.trips.insertMany([
                 "arrivalTimeStamp": "2025-12-21T08:15:00+00:00"
             }
         ]
+    },
+    {
+        "_id": "GHR001",
+        "bookingReference": "GHR001",
+        "cabinClass": "ECONOMY",
+        "passengers": [
+            {
+                "firstName": "Alice",
+                "middleName": "Jane",
+                "lastName": "Cooper",
+                "passengerNumber": 1,
+                "customerId": "1099",
+                "seat": "20A"
+            },
+            {
+                "firstName": "Bob",
+                "lastName": "Cooper",
+                "passengerNumber": 2,
+                "customerId": "1022",
+                "seat": "20B"
+            },
+            {
+                "firstName": "Charlie",
+                "lastName": "Cooper",
+                "passengerNumber": 3,
+                "customerId": "1023",
+                "seat": "20C"
+            }
+        ],
+        "flights": [
+            {
+                "flightNumber": "UA100",
+                "departureAirport": "ORD",
+                "departureTimeStamp": "2025-12-25T08:00:00+00:00",
+                "arrivalAirport": "LAX",
+                "arrivalTimeStamp": "2025-12-25T10:30:00+00:00"
+            }
+        ]
+    },
+    {
+        "_id": "GHR002",
+        "bookingReference": "GHR002",
+        "cabinClass": "BUSINESS",
+        "passengers": [
+            {
+                "firstName": "Diana",
+                "middleName": "Rose",
+                "lastName": "Martinez",
+                "passengerNumber": 1,
+                "customerId": "1099",
+                "seat": "3D"
+            },
+            {
+                "firstName": "Edward",
+                "lastName": "Martinez",
+                "passengerNumber": 2,
+                "customerId": "1032",
+                "seat": "3E"
+            }
+        ],
+        "flights": [
+            {
+                "flightNumber": "AA200",
+                "departureAirport": "MIA",
+                "departureTimeStamp": "2025-12-28T15:30:00+00:00",
+                "arrivalAirport": "ATL",
+                "arrivalTimeStamp": "2025-12-28T17:45:00+00:00"
+            }
+        ]
     }
 ]);
 
@@ -246,6 +315,46 @@ db.baggage.insertMany([
                 "carryOnAllowanceValue": 10
             }
         ]
+    },
+    {
+        "bookingReference": "GHR001",
+        "baggageAllowances": [
+            {
+                "passengerNumber": 1,
+                "allowanceUnit": "kg",
+                "checkedAllowanceValue": 23,
+                "carryOnAllowanceValue": 7
+            },
+            {
+                "passengerNumber": 2,
+                "allowanceUnit": "kg",
+                "checkedAllowanceValue": 23,
+                "carryOnAllowanceValue": 7
+            },
+            {
+                "passengerNumber": 3,
+                "allowanceUnit": "kg",
+                "checkedAllowanceValue": 23,
+                "carryOnAllowanceValue": 7
+            }
+        ]
+    },
+    {
+        "bookingReference": "GHR002",
+        "baggageAllowances": [
+            {
+                "passengerNumber": 1,
+                "allowanceUnit": "kg",
+                "checkedAllowanceValue": 32,
+                "carryOnAllowanceValue": 14
+            },
+            {
+                "passengerNumber": 2,
+                "allowanceUnit": "kg",
+                "checkedAllowanceValue": 32,
+                "carryOnAllowanceValue": 14
+            }
+        ]
     }
 ]);
 
@@ -288,9 +397,34 @@ db.tickets.insertMany([
         "bookingReference": "PQR999",
         "passengerNumber": 1,
         "ticketUrl": "singaporeair.com?ticket=SQ237TICKET"
+    },
+    {
+        "bookingReference": "GHR001",
+        "passengerNumber": 1,
+        "ticketUrl": "united.com?ticket=UA100TICKET001"
+    },
+    {
+        "bookingReference": "GHR001",
+        "passengerNumber": 2,
+        "ticketUrl": "united.com?ticket=UA100TICKET002"
+    },
+    {
+        "bookingReference": "GHR001",
+        "passengerNumber": 3,
+        "ticketUrl": "united.com?ticket=UA100TICKET003"
+    },
+    {
+        "bookingReference": "GHR002",
+        "passengerNumber": 1,
+        "ticketUrl": "aa.com?ticket=AA200TICKET001"
+    },
+    {
+        "bookingReference": "GHR002",
+        "passengerNumber": 2,
+        "ticketUrl": "aa.com?ticket=AA200TICKET002"
     }
 ]);
 
 print("MongoDB initialization complete!");
 print("Collections created: trips, baggage, tickets");
-print("Sample data inserted for PNR: GHTW42, ABC123, XYZ789, DEF456, PQR999");
+print("Sample data inserted for PNR: GHTW42, ABC123, XYZ789, DEF456, PQR999, GHR001, GHR002");

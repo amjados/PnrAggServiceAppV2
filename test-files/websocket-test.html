@@ -159,10 +159,22 @@
             <div class="left-panel">
                 <div class="api-controls">
                     <h3>Test API Request:</h3>
-                    <label>API URL:</label>
-                    <input type="text" id="apiUrl" value="http://localhost:8080/booking/GHTW42"
+                    <label>Fetch by PNR:</label>
+                    <input type="text" id="apiUrlByPNR" value="http://localhost:8080/booking/GHR001"
                         placeholder="Enter full API URL" />
-                    <button onclick="fetchBooking()">Fetch Booking</button>
+                    <button onclick="fetchBooking('apiUrlByPNR')">Fetch by PNR</button>
+                    <small style="color: #666; margin-left: 10px;">Try: <I>GHR001</I>, GHTW42, ABC123, XYZ789, DEF456,
+                        GHR001, GHR002</small>
+                    <br />
+
+
+                    <label>Fetch by Customer ID:</label>
+                    <input type="text" id="apiUrlByCustomerId" value="http://localhost:8080/booking/customer/1099"
+                        placeholder="Enter full API URL" />
+                    <button onclick="fetchBooking('apiUrlByCustomerId')">Fetch by Customer ID</button>
+                    <small style="color: #666; margin-left: 10px;">Try: <I>1099</I>, 5678, 9012, 1022, 1023, 1031,
+                        1032</small>
+
                     <div id="apiResult" class="result-box"></div>
                 </div>
             </div>
@@ -191,8 +203,8 @@
     <script>
         let ws = null;
 
-        async function fetchBooking() {
-            const apiUrl = document.getElementById('apiUrl').value.trim();
+        async function fetchBooking(inputId) {
+            const apiUrl = document.getElementById(inputId).value.trim();
             const resultBox = document.getElementById('apiResult');
 
             if (!apiUrl) {

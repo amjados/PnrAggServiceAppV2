@@ -257,10 +257,16 @@ public class TripService {
     }
 
     /**
-     * Get all trips for a specific customer ID
+     * Get all trips for a specific customer ID with circuit breaker protection
      * 
      * Searches MongoDB for trips where any passenger has the given customerId
      * Uses MongoDB query: { "passengers.customerId": customerId }
+     * 
+     * Circuit Breaker Config:
+     * - Name: tripServiceCB
+     * - Fallback: getTripsByCustomerIdFallback (returns cached data)
+     * - Opens after: 10% failure rate over 10 calls
+     * - Waits: 10 seconds before testing recovery
      * 
      * NoSQL Injection Prevention:
      * - Uses parameterized query with validated input
@@ -270,34 +276,108 @@ public class TripService {
      * -@return Future with list of trips matching the customer ID
      */
     public Future<List<Trip>> getTripsByCustomerId(String customerId) {
-        log.info("Searching trips for Customer ID: {}", customerId);
+        log.info("[CB-BEFORE] TripService search for Customer ID: {} | State: {}", customerId,
+                circuitBreaker.getState());
 
+        // Check if circuit is open
+        if (!circuitBreaker.tryAcquirePermission()) {
+            log.warn("[CB-REJECTED] Circuit is OPEN - calling fallback for Customer ID: {}", customerId);
+            return getTripsByCustomerIdFallback(customerId, new Exception("Circuit breaker is OPEN"));
+        }
+
+        long start = System.nanoTime();
         Promise<List<Trip>> promise = Promise.promise();
 
         // Query for trips where any passenger has this customerId
         JsonObject query = new JsonObject().put("passengers.customerId", customerId);
 
         mongoClient.find("trips", query, ar -> {
+            long duration = System.nanoTime() - start;
+
             if (ar.succeeded()) {
                 List<JsonObject> results = ar.result();
 
                 if (results.isEmpty()) {
                     log.info("No trips found for Customer ID: {}", customerId);
+                    circuitBreaker.onSuccess(duration, java.util.concurrent.TimeUnit.NANOSECONDS);
                     promise.complete(List.of());
                 } else {
                     List<Trip> trips = results.stream()
                             .map(this::mapToTrip)
+                            .peek(trip -> trip.setFromCache(false))
                             .collect(Collectors.toList());
 
+                    // Cache the trips list for this customer ID
+                    Cache cache = cacheManager.getCache("tripsByCustomer");
+                    if (cache != null) {
+                        cache.put(customerId, trips);
+                        log.debug("Cached {} trip(s) for Customer ID: {}", trips.size(), customerId);
+                    }
+
+                    circuitBreaker.onSuccess(duration, java.util.concurrent.TimeUnit.NANOSECONDS);
                     log.info("Found {} trip(s) for Customer ID: {}", trips.size(), customerId);
                     promise.complete(trips);
                 }
             } else {
                 log.error("MongoDB error searching trips for Customer ID: {}", customerId, ar.cause());
-                promise.fail(ar.cause());
+                circuitBreaker.onError(duration, java.util.concurrent.TimeUnit.NANOSECONDS, ar.cause());
+
+                getTripsByCustomerIdFallback(customerId, new Exception(ar.cause())).onComplete(fallbackResult -> {
+                    if (fallbackResult.succeeded()) {
+                        promise.complete(fallbackResult.result());
+                    } else {
+                        promise.fail(fallbackResult.cause());
+                    }
+                });
             }
         });
 
         return promise.future();
     }
+
+    /**
+     * Fallback method for getTripsByCustomerId when circuit is OPEN
+     * 
+     * Returns cached trips list if available, otherwise fails gracefully
+     * This prevents cascading failures when MongoDB is down
+     * Sets fallback messages on each trip to indicate cache usage
+     * 
+     * -@param customerId The customer identifier to search for
+     * -@param ex The exception that triggered the fallback
+     * -@return Future with cached trips or error
+     */
+    private Future<List<Trip>> getTripsByCustomerIdFallback(String customerId, Exception ex) {
+        log.warn("Circuit OPEN for TripService - using fallback for Customer ID: {}. Reason: {}",
+                customerId, ex.getMessage());
+
+        // Try to get from cache
+        Cache cache = cacheManager.getCache("tripsByCustomer");
+        if (cache != null) {
+            @SuppressWarnings("unchecked")
+            List<Trip> cachedTrips = cache.get(customerId, List.class);
+
+            if (cachedTrips != null && !cachedTrips.isEmpty()) {
+                log.info("Returning {} cached trip(s) for Customer ID: {}", cachedTrips.size(), customerId);
+                Instant cacheTime = Instant.now();
+
+                // Mark all trips as from cache and add fallback messages
+                cachedTrips.forEach(trip -> {
+                    trip.setFromCache(true);
+                    trip.setCacheTimestamp(cacheTime);
+                    trip.setPnrFallbackMsg(List.of(
+                            "Trip data from cache - MongoDB unavailable",
+                            "Cache timestamp: " + cacheTime.toString()));
+                });
+
+                return Future.succeededFuture(cachedTrips);
+            }
+        }
+
+        // No cache available - fail gracefully
+        log.error("No cached data available for Customer ID: {}", customerId);
+        return Future.failedFuture(
+                new ServiceUnavailableException("Trip service temporarily unavailable for customer " + customerId));
+    }
+
+    
 }

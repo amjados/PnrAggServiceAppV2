@@ -65,6 +65,76 @@ public class BookingAggregatorService {
     private TicketService ticketService;
 
     /**
+     * Get all bookings for a specific customer ID
+     * 
+     * Retrieves PNRs for the given customerId in a fully reactive way,
+     * then calls aggregateBooking for each PNR in parallel without blocking.
+     * 
+     * BEHAVIOR:
+     * - Searches MongoDB for ALL trips where ANY passenger has the given customerId
+     * - For each matching PNR, retrieves complete booking details (all passengers,
+     * not just the matching one)
+     * - Aggregates all bookings in parallel for maximum performance
+     * 
+     * EXAMPLE SCENARIOS:
+     * 1. Customer "1021" in booking "GHR001" (with passengers 1021, 1022, 1023)
+     * → Returns complete booking GHR001 with all 3 passengers
+     * 
+     * 2. Customer "1031" in booking "GHR002" (with passengers 1031, 1032)
+     * → Returns complete booking GHR002 with all 2 passengers
+     * 
+     * 3. Customer "1021" appears in BOTH "GHR001" and "GHR002"
+     * → Returns both complete bookings (multiple PNRs for same customer)
+     * 
+     * REACTIVE FLOW:
+     * 1. MongoDB query: passengers.customerId (non-blocking)
+     * 2. Extract PNRs from matching trips
+     * 3. Call aggregateBooking(pnr) for each PNR in PARALLEL
+     * 4. Return List<BookingResponse> with all customer's bookings
+     * 
+     * -@param customerId The customer identifier to search for
+     * -@return Future with list of complete booking responses (includes all
+     * passengers per booking)
+     */
+    public Future<List<BookingResponse>> getBookingsByCustomerId(String customerId) {
+        log.info("Searching bookings for Customer ID: {}", customerId);
+
+        // Reactive: Get trips and extract PNRs without blocking
+        return tripService.getTripsByCustomerId(customerId)
+                .compose(trips -> {
+                    if (trips.isEmpty()) {
+                        log.info("No trips found for Customer ID: {}", customerId);
+                        return Future.succeededFuture(List.<BookingResponse>of());
+                    }
+
+                    // Extract PNRs and initiate parallel aggregation
+                    List<String> pnrs = trips.stream()
+                            .map(trip -> trip.getBookingReference())
+                            .collect(Collectors.toList());
+
+                    log.debug("Found {} PNR(s) for Customer ID: {}: {}", pnrs.size(), customerId, pnrs);
+
+                    // Reactive: Aggregate all bookings in parallel
+                    List<Future<BookingResponse>> bookingFutures = pnrs.stream()
+                            .map(this::aggregateBooking)
+                            .collect(Collectors.toList());
+
+                    // Wait for all aggregations to complete
+                    return Future.all(bookingFutures)
+                            .map(cf -> bookingFutures.stream()
+                                    .map(Future::result)
+                                    .collect(Collectors.toList()));
+                })
+                .onSuccess(bookings -> {
+                    log.info("Successfully aggregated {} booking(s) for Customer ID: {}",
+                            bookings.size(), customerId);
+                })
+                .onFailure(error -> {
+                    log.error("Failed to aggregate bookings for Customer ID: {}", customerId, error);
+                });
+    }
+
+    /**
      * -@Autowired: Dependency injection for Vert.x instance
      * --Vert.x is configured in VertxConfig and injected here
      * --Used for event bus communication and async operations
@@ -260,44 +330,4 @@ public class BookingAggregatorService {
         vertx.eventBus().publish("pnr.fetched", event);
     }
 
-    /**
-     * Get all bookings for a specific customer ID
-     * 
-     * Searches for all trips where any passenger has the given customerId
-     * Then aggregates the booking details for each matching PNR
-     * 
-     * -@param customerId The customer identifier to search for
-     * -@return Future with list of complete booking responses
-     */
-    public Future<List<BookingResponse>> getBookingsByCustomerId(String customerId) {
-        log.info("Searching bookings for Customer ID: {}", customerId);
-
-        return tripService.getTripsByCustomerId(customerId)
-                .compose(trips -> {
-                    if (trips.isEmpty()) {
-                        log.info("No trips found for Customer ID: {}", customerId);
-                        return Future.succeededFuture(List.<BookingResponse>of());
-                    }
-
-                    // Aggregate booking details for each trip
-                    List<Future<BookingResponse>> bookingFutures = trips.stream()
-                            .map(trip -> aggregateBooking(trip.getBookingReference()))
-                            .collect(Collectors.toList());
-
-                    return Future.all(bookingFutures)
-                            .map(cf -> {
-                                List<BookingResponse> responses = bookingFutures.stream()
-                                        .map(Future::result)
-                                        .collect(Collectors.toList());
-                                return responses;
-                            });
-                })
-                .onSuccess(bookings -> {
-                    log.info("Successfully aggregated {} booking(s) for Customer ID: {}",
-                            bookings.size(), customerId);
-                })
-                .onFailure(error -> {
-                    log.error("Failed to aggregate bookings for Customer ID: {}", customerId, error);
-                });
-    }
 }
