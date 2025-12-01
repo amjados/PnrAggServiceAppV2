@@ -57,6 +57,13 @@ class BookingAggregatorServiceTest {
 
     @BeforeEach
     void setUp() {
+        /*
+         * whyCodeAdded: Initialize mock dependencies and comprehensive test data for
+         * BookingAggregatorService tests
+         * Sets up Vert.x event bus mocks for reactive message publishing,
+         * and creates complete test objects (Trip, Baggage, Ticket) with realistic data
+         * to test parallel composition and data aggregation scenarios
+         */
         // Mock Vert.x event bus
         when(vertx.eventBus()).thenReturn(eventBus);
         when(eventBus.publish(anyString(), any())).thenReturn(eventBus);
@@ -120,6 +127,17 @@ class BookingAggregatorServiceTest {
         validTicket.setTicketUrl("https://tickets.example.com/ABC123-1");
     }
 
+    /**
+     * Input: PNR "ABC123" with complete trip, baggage, and ticket data
+     * ExpectedOut: Succeeded Future with BookingResponse status "SUCCESS", 2
+     * passengers, 1 flight, event published
+     * 
+     * ExistAsWellIn:
+     * BookingControllerTest.testGetBooking_ResponseStructureCompliance
+     * (controller-level)
+     * NOTE: This validates service aggregation logic, controller test validates
+     * HTTP response structure
+     */
     @Test
     void testAggregateBooking_Success_AllDataAvailable() {
         // Given
@@ -158,6 +176,11 @@ class BookingAggregatorServiceTest {
         verify(eventBus).publish(eq("pnr.fetched"), any(JsonObject.class));
     }
 
+    /**
+     * Input: PNR "ABC123" with cached trip data, one ticket not found
+     * ExpectedOut: Succeeded Future with BookingResponse status "DEGRADED", flight
+     * data with fallback messages
+     */
     @Test
     void testAggregateBooking_WithCachedTrip() {
         // Given - Trip from cache
@@ -184,6 +207,12 @@ class BookingAggregatorServiceTest {
         assertNotNull(response.getFlights().get(0));
     }
 
+    /**
+     * Input: PNR "ABC123" with default baggage (isFromDefault=true, "Using default
+     * baggage allowance" message)
+     * ExpectedOut: Succeeded Future with BookingResponse status "DEGRADED",
+     * passenger fallback messages contain "default"
+     */
     @Test
     void testAggregateBooking_WithDefaultBaggage() {
         // Given - Default baggage
@@ -211,6 +240,12 @@ class BookingAggregatorServiceTest {
                 .anyMatch(msg -> msg.contains("default")));
     }
 
+    /**
+     * Input: PNR "ABC123" with fallback ticket (no URL, "Ticket service
+     * unavailable" message)
+     * ExpectedOut: Succeeded Future with BookingResponse, passenger1 has no ticket
+     * URL and fallback message
+     */
     @Test
     void testAggregateBooking_WithTicketFallback() {
         // Given - Ticket with fallback
@@ -239,6 +274,11 @@ class BookingAggregatorServiceTest {
                 .anyMatch(msg -> msg.contains("Ticket service unavailable")));
     }
 
+    /**
+     * Input: PNR "ABC123" with trip service failure (MongoDB error)
+     * ExpectedOut: Failed Future with "MongoDB error" message, other services not
+     * called (fail fast)
+     */
     @Test
     void testAggregateBooking_TripFailure() {
         // Given
@@ -257,6 +297,12 @@ class BookingAggregatorServiceTest {
         verify(ticketService, never()).getTicket(any(), anyInt());
     }
 
+    /**
+     * Input: PNR "ABC123" with valid trip and baggage, 2 passengers with one ticket
+     * not found
+     * ExpectedOut: Succeeded Future with all services called in parallel (trip,
+     * baggage, 2 ticket calls)
+     */
     @Test
     void testAggregateBooking_ParallelExecution() {
         // Given
@@ -276,6 +322,12 @@ class BookingAggregatorServiceTest {
         verify(ticketService).getTicket("ABC123", 2);
     }
 
+    /**
+     * Input: PNR "ABC123" with 2 passengers (John M Doe with middle name, Jane
+     * Smith without)
+     * ExpectedOut: Succeeded Future with passenger full names "John M Doe" and
+     * "Jane Smith"
+     */
     @Test
     void testAggregateBooking_FullNameBuilding() {
         // Given
@@ -297,6 +349,12 @@ class BookingAggregatorServiceTest {
         assertEquals("Jane Smith", response.getPassengers().get(1).getFullName());
     }
 
+    /**
+     * Input: PNR "ABC123" with specific allowance for passenger 1 (30kg) and
+     * default allowance (25kg)
+     * ExpectedOut: Succeeded Future with passenger1 having 30kg/10kg allowances,
+     * passenger2 having default 25kg/7kg
+     */
     @Test
     void testAggregateBooking_BaggageAllowanceMapping() {
         // Given - Specific allowance for passenger 1, default for others
@@ -328,6 +386,12 @@ class BookingAggregatorServiceTest {
         assertEquals(7, passenger2.getCarryOnAllowanceValue());
     }
 
+    /**
+     * Input: PNR "ABC123" with trip from cache and PNR-level fallback messages
+     * ("Trip data from cache", "Cache timestamp: 2025-12-01")
+     * ExpectedOut: Succeeded Future with BookingResponse containing 2 PNR-level
+     * fallback messages including "cache"
+     */
     @Test
     void testAggregateBooking_PnrLevelFallbackMessages() {
         // Given - Trip with PNR-level fallback messages
@@ -350,6 +414,11 @@ class BookingAggregatorServiceTest {
         assertTrue(response.getPnrFallbackMsg().get(0).contains("cache"));
     }
 
+    /**
+     * Input: PNR "ABC123" with valid data
+     * ExpectedOut: Event published to "pnr.fetched" with JsonObject containing PNR
+     * "ABC123", status "SUCCESS", and timestamp
+     */
     @Test
     void testAggregateBooking_EventBusPublication() {
         // Given
@@ -372,6 +441,12 @@ class BookingAggregatorServiceTest {
         assertNotNull(event.getString("timestamp"));
     }
 
+    /**
+     * Input: PNR "ABC123" with 2 passengers having customer IDs "C12345" and
+     * "C67890"
+     * ExpectedOut: Succeeded Future with BookingResponse passengers having correct
+     * customer IDs
+     */
     @Test
     void testAggregateBooking_CustomerIdPropagation() {
         // Given
@@ -391,6 +466,16 @@ class BookingAggregatorServiceTest {
         assertEquals("C67890", response.getPassengers().get(1).getCustomerId());
     }
 
+    /**
+     * Input: PNR "ABC123" with all tickets missing (both passengers)
+     * ExpectedOut: Succeeded Future with BookingResponse where passengers have no
+     * ticket URLs (valid scenario)
+     * 
+     * ExistAsWellIn: BookingControllerTest.testGetBooking_PassengerWithoutTicket
+     * (controller-level)
+     * NOTE: This validates service fallback logic, controller test validates HTTP
+     * response for DVT requirement
+     */
     @Test
     void testAggregateBooking_MissingTicketsHandledGracefully() {
         // Given - All tickets missing (valid scenario)
@@ -411,6 +496,11 @@ class BookingAggregatorServiceTest {
         assertNull(response.getPassengers().get(1).getTicketUrl());
     }
 
+    /**
+     * Input: Customer ID "C12345" with 2 trips (ABC123 and XYZ789)
+     * ExpectedOut: Succeeded Future with List of 2 BookingResponses with status
+     * "SUCCESS"
+     */
     @Test
     void testGetBookingsByCustomerId_Success() {
         // Given
@@ -455,6 +545,10 @@ class BookingAggregatorServiceTest {
         verify(tripService, times(2)).getTripInfo(anyString());
     }
 
+    /**
+     * Input: Customer ID "C99999" (non-existent)
+     * ExpectedOut: Succeeded Future with empty List of BookingResponses
+     */
     @Test
     void testGetBookingsByCustomerId_NoTripsFound() {
         // Given
@@ -473,6 +567,10 @@ class BookingAggregatorServiceTest {
         verify(tripService, never()).getTripInfo(anyString());
     }
 
+    /**
+     * Input: Customer ID "C12345" with trip service failure (MongoDB error)
+     * ExpectedOut: Failed Future with "MongoDB error" message
+     */
     @Test
     void testGetBookingsByCustomerId_TripServiceFailure() {
         // Given
@@ -487,6 +585,10 @@ class BookingAggregatorServiceTest {
         assertTrue(future.cause().getMessage().contains("MongoDB error"));
     }
 
+    /**
+     * Input: Customer ID "C12345" with 1 trip, but aggregation fails
+     * ExpectedOut: Failed Future due to aggregation failure
+     */
     @Test
     void testGetBookingsByCustomerId_AggregationFailure() {
         // Given
@@ -508,6 +610,10 @@ class BookingAggregatorServiceTest {
         assertTrue(future.failed());
     }
 
+    /**
+     * Input: Customer ID "C12345" with 5 bookings (PNR0-PNR4)
+     * ExpectedOut: Succeeded Future with List of 5 BookingResponses
+     */
     @Test
     void testGetBookingsByCustomerId_MultipleCustomerBookings() {
         // Given - Customer with 5 bookings

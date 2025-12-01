@@ -9,6 +9,11 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class ExceptionTest {
 
+    /**
+     * Input: Message "PNR not found: ABC123"
+     * ExpectedOut: PNRNotFoundException created with correct message and extends
+     * RuntimeException
+     */
     @Test
     void testPNRNotFoundException_CreationAndMessage() {
         // Given
@@ -23,6 +28,10 @@ class ExceptionTest {
         assertInstanceOf(RuntimeException.class, exception);
     }
 
+    /**
+     * Input: Null message
+     * ExpectedOut: PNRNotFoundException created with null message
+     */
     @Test
     void testPNRNotFoundException_NullMessage() {
         // When
@@ -32,6 +41,10 @@ class ExceptionTest {
         assertNull(exception.getMessage());
     }
 
+    /**
+     * Input: Message "PNR not found: XYZ789" thrown as exception
+     * ExpectedOut: PNRNotFoundException is thrown and caught
+     */
     @Test
     void testPNRNotFoundException_Throwable() {
         // Given
@@ -43,6 +56,11 @@ class ExceptionTest {
         });
     }
 
+    /**
+     * Input: Message "Trip service temporarily unavailable"
+     * ExpectedOut: ServiceUnavailableException created with correct message and
+     * extends RuntimeException
+     */
     @Test
     void testServiceUnavailableException_CreationAndMessage() {
         // Given
@@ -57,6 +75,10 @@ class ExceptionTest {
         assertInstanceOf(RuntimeException.class, exception);
     }
 
+    /**
+     * Input: Null message
+     * ExpectedOut: ServiceUnavailableException created with null message
+     */
     @Test
     void testServiceUnavailableException_NullMessage() {
         // When
@@ -66,6 +88,11 @@ class ExceptionTest {
         assertNull(exception.getMessage());
     }
 
+    /**
+     * Input: Message "Circuit breaker open - service unavailable" thrown as
+     * exception
+     * ExpectedOut: ServiceUnavailableException is thrown and caught
+     */
     @Test
     void testServiceUnavailableException_Throwable() {
         // Given
@@ -77,6 +104,11 @@ class ExceptionTest {
         });
     }
 
+    /**
+     * Input: Both exception types with test message
+     * ExpectedOut: Both exceptions are RuntimeException instances but different
+     * classes
+     */
     @Test
     void testExceptionHierarchy() {
         // When
@@ -91,6 +123,11 @@ class ExceptionTest {
         assertNotEquals(pnrException.getClass(), serviceException.getClass());
     }
 
+    /**
+     * Input: Formatted message "PNR not found: ABC123" using String.format
+     * ExpectedOut: Exception message contains PNR "ABC123" and starts with "PNR not
+     * found:"
+     */
     @Test
     void testExceptionMessageFormatting() {
         // Given
@@ -105,6 +142,10 @@ class ExceptionTest {
         assertTrue(exception.getMessage().startsWith("PNR not found:"));
     }
 
+    /**
+     * Input: PNRNotFoundException with message "Test exception"
+     * ExpectedOut: Exception has non-null stack trace with at least one element
+     */
     @Test
     void testExceptionStackTrace() {
         // Given

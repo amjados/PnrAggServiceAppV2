@@ -47,6 +47,14 @@ class PNRWebSocketHandlerTest {
 
     @BeforeEach
     void setUp() {
+        /*
+         * whyCodeAdded: Initialize event bus and WebSocket session mocks for
+         * PNRWebSocketHandler tests
+         * Sets up two mock WebSocket sessions in open state and configures event bus
+         * consumer
+         * to test session management, message broadcasting, and connection lifecycle
+         * scenarios
+         */
         when(eventBus.consumer(anyString(), any())).thenReturn(messageConsumer);
         when(session1.isOpen()).thenReturn(true);
         when(session2.isOpen()).thenReturn(true);
@@ -54,6 +62,10 @@ class PNRWebSocketHandlerTest {
         when(session2.getId()).thenReturn("session2");
     }
 
+    /**
+     * Input: WebSocket handler initialization
+     * ExpectedOut: Event bus consumer registered for "pnr.fetched" channel
+     */
     @Test
     void testInit_SubscribesToEventBus() {
         // When
@@ -63,6 +75,10 @@ class PNRWebSocketHandlerTest {
         verify(eventBus).consumer(eq("pnr.fetched"), any());
     }
 
+    /**
+     * Input: WebSocket session1 connection established
+     * ExpectedOut: Session added to handler's session set
+     */
     @Test
     void testAfterConnectionEstablished_AddsSession() throws Exception {
         // When
@@ -80,6 +96,10 @@ class PNRWebSocketHandlerTest {
         assertNotNull(handlerCaptor.getValue());
     }
 
+    /**
+     * Input: WebSocket session1 established then closed with NORMAL status
+     * ExpectedOut: Session removed from handler's session set
+     */
     @Test
     void testAfterConnectionClosed_RemovesSession() throws Exception {
         // Given - Add then remove session
@@ -93,6 +113,11 @@ class PNRWebSocketHandlerTest {
         assertDoesNotThrow(() -> webSocketHandler.afterConnectionClosed(session1, CloseStatus.NORMAL));
     }
 
+    /**
+     * Input: Two WebSocket sessions (session1, session2) and event data (PNR
+     * "ABC123", status "SUCCESS")
+     * ExpectedOut: Both sessions receive the broadcast message
+     */
     @Test
     void testMultipleSessions_AllReceiveBroadcast() throws Exception {
         // Given
@@ -120,6 +145,10 @@ class PNRWebSocketHandlerTest {
         verify(session2, atLeastOnce()).sendMessage(any(TextMessage.class));
     }
 
+    /**
+     * Input: Two sessions (session1 closed, session2 open) and event data
+     * ExpectedOut: Only session2 receives message, session1 skipped
+     */
     @Test
     void testBroadcast_SkipsClosedSessions() throws Exception {
         // Given
@@ -146,6 +175,12 @@ class PNRWebSocketHandlerTest {
         verify(session2, atLeastOnce()).sendMessage(any()); // Open session
     }
 
+    /**
+     * Input: Two sessions with session1 throwing IOException, event data (PNR
+     * "ABC123")
+     * ExpectedOut: Exception caught, session2 still receives message, no exception
+     * thrown
+     */
     @Test
     void testBroadcast_ContinuesOnIOException() throws Exception {
         // Given
@@ -170,6 +205,11 @@ class PNRWebSocketHandlerTest {
         verify(session2, atLeastOnce()).sendMessage(any());
     }
 
+    /**
+     * Input: Event data with PNR "GHTW42", status "DEGRADED", timestamp
+     * "2025-12-01T10:00:00Z"
+     * ExpectedOut: TextMessage payload contains "GHTW42" and "DEGRADED"
+     */
     @Test
     void testEventDataFormat() throws Exception {
         // Given
@@ -199,6 +239,11 @@ class PNRWebSocketHandlerTest {
         assertTrue(payload.contains("DEGRADED"));
     }
 
+    /**
+     * Input: Session lifecycle - start empty, add session1, add session2, remove
+     * session1, remove session2
+     * ExpectedOut: Session count correctly tracks lifecycle: 0->1->2->1->0
+     */
     @Test
     void testConnectionLifecycle() throws Exception {
         // Given - Empty handler
@@ -229,6 +274,10 @@ class PNRWebSocketHandlerTest {
         assertEquals(0, webSocketHandler.getSessions().size());
     }
 
+    /**
+     * Input: 10 WebSocket sessions added concurrently, then 5 removed
+     * ExpectedOut: Session count is 10 after adds, then 5 after removals
+     */
     @Test
     void testConcurrentSessionManagement() throws Exception {
         // Given - Multiple sessions added concurrently

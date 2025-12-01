@@ -40,6 +40,12 @@ class CustomerIdEndpointTest {
 
     @BeforeEach
     void setUp() {
+        /*
+         * whyCodeAdded: Initialize a list of mock BookingResponse objects for customer
+         * ID endpoint tests
+         * Creates two sample bookings with different PNRs and cabin classes to test
+         * multi-booking retrieval scenarios and validate proper list handling
+         */
         mockBookings = new ArrayList<>();
 
         BookingResponse booking1 = new BookingResponse();
@@ -56,6 +62,11 @@ class CustomerIdEndpointTest {
         mockBookings.add(booking2);
     }
 
+    /**
+     * Input: Customer ID "C12345"
+     * ExpectedOut: HTTP 200 OK with map containing customerId, count=2, bookings
+     * list, and timestamp
+     */
     @Test
     void testGetBookingsByCustomerId_Success() throws ExecutionException, InterruptedException {
         // Given
@@ -86,6 +97,11 @@ class CustomerIdEndpointTest {
         verify(aggregatorService).getBookingsByCustomerId("C12345");
     }
 
+    /**
+     * Input: Customer ID "C99999" (non-existent)
+     * ExpectedOut: HTTP 200 OK with message "No bookings found" and empty bookings
+     * list
+     */
     @Test
     void testGetBookingsByCustomerId_NoBookingsFound() throws ExecutionException, InterruptedException {
         // Given
@@ -111,6 +127,11 @@ class CustomerIdEndpointTest {
         assertTrue(bookings.isEmpty());
     }
 
+    /**
+     * Input: Customer ID "C12345" with service unavailable error
+     * ExpectedOut: HTTP 503 SERVICE_UNAVAILABLE with error map containing "Service
+     * Unavailable" and "temporarily unavailable" message
+     */
     @Test
     void testGetBookingsByCustomerId_ServiceUnavailable() throws ExecutionException, InterruptedException {
         // Given
@@ -134,6 +155,11 @@ class CustomerIdEndpointTest {
         assertNotNull(errorBody.get("timestamp"));
     }
 
+    /**
+     * Input: Customer ID "C12345" with unexpected runtime error
+     * ExpectedOut: HTTP 500 INTERNAL_SERVER_ERROR with error map containing
+     * "Internal Server Error" and timestamp
+     */
     @Test
     void testGetBookingsByCustomerId_InternalServerError() throws ExecutionException, InterruptedException {
         // Given
@@ -155,6 +181,11 @@ class CustomerIdEndpointTest {
         assertNotNull(errorBody.get("timestamp"));
     }
 
+    /**
+     * Input: Various valid customer ID formats: "C123", "customer1", "CUST12345",
+     * "1234", "abc123"
+     * ExpectedOut: HTTP 200 OK for all valid formats
+     */
     @Test
     void testGetBookingsByCustomerId_ValidFormats() throws ExecutionException, InterruptedException {
         // Given - Various valid customer ID formats
@@ -175,6 +206,11 @@ class CustomerIdEndpointTest {
         verify(aggregatorService, times(validIds.length)).getBookingsByCustomerId(anyString());
     }
 
+    /**
+     * Input: Customer ID "C12345" with single booking
+     * ExpectedOut: HTTP 200 OK with count=1 and bookings list containing one
+     * booking with PNR "ABC123"
+     */
     @Test
     void testGetBookingsByCustomerId_SingleBooking() throws ExecutionException, InterruptedException {
         // Given - Customer with only one booking
@@ -202,6 +238,11 @@ class CustomerIdEndpointTest {
         assertEquals("ABC123", bookings.get(0).getPnr());
     }
 
+    /**
+     * Input: Customer ID "C12345" with 5 bookings
+     * ExpectedOut: HTTP 200 OK with count=5 and bookings list containing 5 bookings
+     * (PNR0-PNR4)
+     */
     @Test
     void testGetBookingsByCustomerId_MultipleBookings() throws ExecutionException, InterruptedException {
         // Given - Customer with many bookings
@@ -232,6 +273,11 @@ class CustomerIdEndpointTest {
         assertEquals(5, bookings.size());
     }
 
+    /**
+     * Input: Customer ID "C12345"
+     * ExpectedOut: Response structure with required fields: customerId, bookings,
+     * count, timestamp (ISO-8601 format)
+     */
     @Test
     void testGetBookingsByCustomerId_ResponseStructure() throws ExecutionException, InterruptedException {
         // Given
@@ -258,6 +304,10 @@ class CustomerIdEndpointTest {
         assertTrue(timestamp.matches("\\d{4}-\\d{2}-\\d{2}T.*"));
     }
 
+    /**
+     * Input: Customer ID "C12345" with degraded booking (from cache)
+     * ExpectedOut: HTTP 200 OK with booking status "DEGRADED" and fromCache=true
+     */
     @Test
     void testGetBookingsByCustomerId_DegradedBookings() throws ExecutionException, InterruptedException {
         // Given - Bookings with degraded status
@@ -284,6 +334,11 @@ class CustomerIdEndpointTest {
         assertEquals("DEGRADED", bookings.get(0).getStatus());
     }
 
+    /**
+     * Input: Valid customer IDs (alphanumeric 1-20 chars) and invalid IDs (empty,
+     * too long, special chars)
+     * ExpectedOut: Pattern validation succeeds for valid IDs, fails for invalid IDs
+     */
     @Test
     void testGetBookingsByCustomerId_AlphanumericCustomerIds() {
         // Test that the pattern allows alphanumeric characters

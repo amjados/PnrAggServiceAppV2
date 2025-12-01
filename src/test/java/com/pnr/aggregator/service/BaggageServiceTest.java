@@ -47,6 +47,10 @@ class BaggageServiceTest {
 
     @BeforeEach
     void setUp() {
+        /* whyCodeAdded: Initialize circuit breaker mocks and test data for BaggageService tests
+         Sets up circuit breaker in CLOSED state to enable testing normal operations,
+         and creates valid baggage document with allowances to test MongoDB retrieval and fallback scenarios
+        */
         // Mock circuit breaker registry
         when(circuitBreakerRegistry.circuitBreaker("baggageServiceCB")).thenReturn(circuitBreaker);
         when(circuitBreaker.getName()).thenReturn("baggageServiceCB");
@@ -66,6 +70,11 @@ class BaggageServiceTest {
                                 .put("carryOnAllowanceValue", 10)));
     }
 
+    /**
+     * Input: PNR "ABC123" with valid baggage data in MongoDB
+     * ExpectedOut: Succeeded Future with Baggage containing 1 allowance (30kg
+     * checked, 10kg carry-on), not from cache/default
+     */
     @Test
     void testGetBaggageInfo_Success() {
         // Given
@@ -102,6 +111,11 @@ class BaggageServiceTest {
         verify(circuitBreaker).onSuccess(anyLong(), eq(TimeUnit.NANOSECONDS));
     }
 
+    /**
+     * Input: PNR "ABC123", baggage not found in MongoDB
+     * ExpectedOut: Succeeded Future with default Baggage (25kg checked, 7kg
+     * carry-on) with "default" fallback message
+     */
     @Test
     void testGetBaggageInfo_NotFound_ReturnsDefault() {
         // Given
@@ -140,6 +154,10 @@ class BaggageServiceTest {
         verify(circuitBreaker).onError(anyLong(), eq(TimeUnit.NANOSECONDS), any());
     }
 
+    /**
+     * Input: PNR "ABC123", MongoDB connection failure
+     * ExpectedOut: Succeeded Future with default Baggage with fallback message
+     */
     @Test
     void testGetBaggageInfo_MongoDbError_ReturnsDefault() {
         // Given
@@ -167,6 +185,11 @@ class BaggageServiceTest {
         verify(circuitBreaker).onError(anyLong(), eq(TimeUnit.NANOSECONDS), any());
     }
 
+    /**
+     * Input: PNR "ABC123", circuit breaker OPEN state
+     * ExpectedOut: Succeeded Future with default Baggage with fallback messages,
+     * MongoDB not called
+     */
     @Test
     void testGetBaggageInfo_CircuitBreakerOpen_ReturnsDefault() {
         // Given
@@ -189,6 +212,11 @@ class BaggageServiceTest {
         verify(mongoClient, never()).findOne(any(), any(), any(), any());
     }
 
+    /**
+     * Input: PNR "ABC123" with baggage allowances for 2 passengers
+     * ExpectedOut: Succeeded Future with Baggage containing 2 allowances (30kg and
+     * 25kg checked)
+     */
     @Test
     void testGetBaggageInfo_MultiplePassengers() {
         // Given
@@ -228,6 +256,11 @@ class BaggageServiceTest {
         assertEquals(25, baggage.getAllowances().get(1).getCheckedAllowanceValue());
     }
 
+    /**
+     * Input: PNR "ABC123"
+     * ExpectedOut: MongoDB query with single field "bookingReference":"ABC123"
+     * (parameterized for NoSQL injection prevention)
+     */
     @Test
     void testGetBaggageInfo_VerifyQueryFormat() {
         // Given
@@ -253,6 +286,11 @@ class BaggageServiceTest {
         assertEquals(1, capturedQuery.size()); // Only one field, properly parameterized
     }
 
+    /**
+     * Input: PNR "TEST123", circuit breaker does not permit
+     * ExpectedOut: Succeeded Future with default economy Baggage (25kg checked, 7kg
+     * carry-on, no specific passenger)
+     */
     @Test
     void testDefaultBaggageAllowance_Values() {
         // Given circuit breaker is open
@@ -273,6 +311,11 @@ class BaggageServiceTest {
         assertEquals(7, defaultAllowance.getCarryOnAllowanceValue());
     }
 
+    /**
+     * Input: PNR "ABC123" with baggage in pounds (50 lbs checked, 15 lbs carry-on)
+     * ExpectedOut: Succeeded Future with Baggage using "lbs" unit and correct
+     * values
+     */
     @Test
     void testGetBaggageInfo_DifferentUnits() {
         // Given

@@ -65,6 +65,14 @@ class TripServiceTest {
 
     @BeforeEach
     void setUp() {
+        /*
+         * whyCodeAdded: Initialize circuit breaker, cache, and test data for
+         * TripService tests
+         * Sets up circuit breaker in CLOSED state and creates comprehensive trip
+         * documents
+         * with passengers and flights to test MongoDB operations, caching, and circuit
+         * breaker patterns
+         */
         // Mock circuit breaker registry
         when(circuitBreakerRegistry.circuitBreaker("tripServiceCB")).thenReturn(circuitBreaker);
         when(circuitBreaker.getName()).thenReturn("tripServiceCB");
@@ -98,6 +106,11 @@ class TripServiceTest {
         validTrip.setCabinClass("ECONOMY");
     }
 
+    /**
+     * Input: PNR "ABC123" with valid trip data in MongoDB
+     * ExpectedOut: Succeeded Future with Trip object containing booking reference,
+     * cabin class, passengers, and flights; not from cache
+     */
     @Test
     void testGetTripInfo_Success() {
         // Given
@@ -132,6 +145,11 @@ class TripServiceTest {
         verify(cache).put("ABC123", trip);
     }
 
+    /**
+     * Input: PNR "NOTFND" that does not exist in MongoDB
+     * ExpectedOut: Failed Future with PNRNotFoundException containing "PNR not
+     * found" message
+     */
     @Test
     void testGetTripInfo_NotFound() {
         // Given
@@ -158,6 +176,11 @@ class TripServiceTest {
         verify(circuitBreaker).onSuccess(anyLong(), eq(TimeUnit.NANOSECONDS));
     }
 
+    /**
+     * Input: PNR "ABC123" with MongoDB connection failure but cached data available
+     * ExpectedOut: Succeeded Future with Trip from cache, isFromCache=true, with
+     * fallback message about cache usage
+     */
     @Test
     void testGetTripInfo_MongoDbError_WithCache() {
         // Given
@@ -189,6 +212,10 @@ class TripServiceTest {
         verify(circuitBreaker).onError(anyLong(), eq(TimeUnit.NANOSECONDS), any());
     }
 
+    /**
+     * Input: PNR "ABC123" with MongoDB connection failure and no cached data
+     * ExpectedOut: Failed Future with ServiceUnavailableException
+     */
     @Test
     void testGetTripInfo_MongoDbError_NoCache() {
         // Given
@@ -216,6 +243,11 @@ class TripServiceTest {
         verify(circuitBreaker).onError(anyLong(), eq(TimeUnit.NANOSECONDS), any());
     }
 
+    /**
+     * Input: PNR "ABC123" with circuit breaker OPEN state but cached data available
+     * ExpectedOut: Succeeded Future with Trip from cache, isFromCache=true, with
+     * cache timestamp
+     */
     @Test
     void testGetTripInfo_CircuitBreakerOpen_WithCache() {
         // Given
@@ -236,6 +268,10 @@ class TripServiceTest {
         verify(mongoClient, never()).findOne(any(), any(), any(), any());
     }
 
+    /**
+     * Input: PNR "ABC123" with circuit breaker OPEN state and no cached data
+     * ExpectedOut: Failed Future with ServiceUnavailableException
+     */
     @Test
     void testGetTripInfo_CircuitBreakerOpen_NoCache() {
         // Given
@@ -254,6 +290,12 @@ class TripServiceTest {
         verify(mongoClient, never()).findOne(any(), any(), any(), any());
     }
 
+    /**
+     * Input: PNR "ABC123" with complete trip data including passenger and flight
+     * details
+     * ExpectedOut: Trip object with correctly mapped passenger (John M Doe, C12345)
+     * and flight (AA100, JFK to LAX)
+     */
     @Test
     void testMapToTrip_CompleteData() {
         // When
@@ -292,6 +334,11 @@ class TripServiceTest {
         assertEquals("LAX", flight.getArrivalAirport());
     }
 
+    /**
+     * Input: PNR "ABC123"
+     * ExpectedOut: MongoDB query with single field "bookingReference":"ABC123"
+     * (parameterized for NoSQL injection prevention)
+     */
     @Test
     void testGetTripInfo_VerifyQueryFormat() {
         // Given
@@ -317,6 +364,11 @@ class TripServiceTest {
         assertEquals(1, capturedQuery.size()); // Only one field, properly parameterized
     }
 
+    /**
+     * Input: PNR "ABC123" with two passengers (John M Doe and Jane K Smith)
+     * ExpectedOut: Trip object with 2 passengers, second passenger has customerId
+     * "C67890"
+     */
     @Test
     void testGetTripInfo_MultiplePassengers() {
         // Given
@@ -351,6 +403,11 @@ class TripServiceTest {
         assertEquals("C67890", trip.getPassengers().get(1).getCustomerId());
     }
 
+    /**
+     * Input: Customer ID "C12345" with 2 trips in MongoDB
+     * ExpectedOut: Succeeded Future with List of 2 Trips with booking references
+     * "ABC123" and "XYZ789"
+     */
     @Test
     void testGetTripsByCustomerId_Success() {
         // Given
@@ -383,6 +440,10 @@ class TripServiceTest {
         assertEquals("XYZ789", trips.get(1).getBookingReference());
     }
 
+    /**
+     * Input: Customer ID "C99999" (non-existent)
+     * ExpectedOut: Succeeded Future with empty List of Trips
+     */
     @Test
     void testGetTripsByCustomerId_NoResults() {
         // Given
@@ -406,6 +467,10 @@ class TripServiceTest {
         assertTrue(trips.isEmpty());
     }
 
+    /**
+     * Input: Customer ID "C12345" with MongoDB connection failure
+     * ExpectedOut: Failed Future with error message "Connection failed"
+     */
     @Test
     void testGetTripsByCustomerId_MongoDbError() {
         // Given
@@ -428,6 +493,11 @@ class TripServiceTest {
         assertTrue(future.cause().getMessage().contains("Connection failed"));
     }
 
+    /**
+     * Input: Customer ID "C12345"
+     * ExpectedOut: MongoDB query with dot notation field
+     * "passengers.customerId":"C12345" (parameterized)
+     */
     @Test
     void testGetTripsByCustomerId_VerifyQueryFormat() {
         // Given
@@ -452,6 +522,10 @@ class TripServiceTest {
         assertEquals(1, capturedQuery.size()); // Only one field, properly parameterized
     }
 
+    /**
+     * Input: Customer ID "C12345" with 5 trips in MongoDB
+     * ExpectedOut: Succeeded Future with List of 5 Trips (PNR0 to PNR4)
+     */
     @Test
     void testGetTripsByCustomerId_MultipleTrips() {
         // Given

@@ -45,6 +45,10 @@ class TicketServiceTest {
 
     @BeforeEach
     void setUp() {
+        /* whyCodeAdded: Initialize circuit breaker mocks and test data for TicketService tests
+         Sets up circuit breaker in CLOSED state to enable testing normal operations,
+         and creates valid ticket document with URL to test MongoDB retrieval and missing ticket scenarios
+        */
         // Mock circuit breaker registry
         when(circuitBreakerRegistry.circuitBreaker("ticketServiceCB")).thenReturn(circuitBreaker);
         when(circuitBreaker.getName()).thenReturn("ticketServiceCB");
@@ -60,6 +64,11 @@ class TicketServiceTest {
                 .put("ticketUrl", "https://tickets.example.com/ABC123-1");
     }
 
+    /**
+     * Input: PNR "ABC123", passenger number 1
+     * ExpectedOut: Succeeded Future with Ticket containing booking reference,
+     * passenger number, ticket URL, and no fallback message
+     */
     @Test
     void testGetTicket_Success() {
         // Given
@@ -90,6 +99,11 @@ class TicketServiceTest {
         verify(circuitBreaker).onSuccess(anyLong(), eq(TimeUnit.NANOSECONDS));
     }
 
+    /**
+     * Input: PNR "ABC123", passenger number 1, ticket not found in MongoDB
+     * ExpectedOut: Failed Future with "not found" message; circuit breaker counts
+     * as success (valid scenario)
+     */
     @Test
     void testGetTicket_NotFound_StillSuccess() {
         // Given - Missing ticket is valid scenario
@@ -116,6 +130,11 @@ class TicketServiceTest {
         verify(circuitBreaker).onSuccess(anyLong(), eq(TimeUnit.NANOSECONDS));
     }
 
+    /**
+     * Input: PNR "ABC123", passenger number 1, MongoDB connection failure
+     * ExpectedOut: Succeeded Future with fallback Ticket (no URL) containing
+     * "unavailable" message
+     */
     @Test
     void testGetTicket_MongoDbError_ReturnsFallback() {
         // Given
@@ -150,6 +169,11 @@ class TicketServiceTest {
         verify(circuitBreaker).onError(anyLong(), eq(TimeUnit.NANOSECONDS), any());
     }
 
+    /**
+     * Input: PNR "ABC123", passenger number 1, circuit breaker OPEN state
+     * ExpectedOut: Succeeded Future with fallback Ticket (no URL) containing
+     * "unavailable" message, MongoDB not called
+     */
     @Test
     void testGetTicket_CircuitBreakerOpen_ReturnsFallback() {
         // Given
@@ -175,6 +199,11 @@ class TicketServiceTest {
         verify(mongoClient, never()).findOne(any(), any(), any(), any());
     }
 
+    /**
+     * Input: PNR "ABC123", passenger number 1
+     * ExpectedOut: MongoDB query with two fields: "bookingReference":"ABC123" and
+     * "passengerNumber":1 (both parameterized)
+     */
     @Test
     void testGetTicket_VerifyQueryFormat() {
         // Given
@@ -201,6 +230,11 @@ class TicketServiceTest {
         assertEquals(2, capturedQuery.size()); // Two fields, both properly parameterized
     }
 
+    /**
+     * Input: PNR "ABC123" with passenger numbers 1 and 2
+     * ExpectedOut: Two succeeded Futures with Tickets having respective passenger
+     * numbers and ticket URLs ending in "-1" and "-2"
+     */
     @Test
     void testGetTicket_DifferentPassengerNumbers() {
         // Given
@@ -238,6 +272,11 @@ class TicketServiceTest {
         assertTrue(future2.result().getTicketUrl().endsWith("-2"));
     }
 
+    /**
+     * Input: PNR "TEST123", passenger number 5, circuit breaker does not permit
+     * ExpectedOut: Succeeded Future with fallback Ticket having no URL and 2
+     * fallback messages
+     */
     @Test
     void testGetTicket_FallbackTicketStructure() {
         // Given
@@ -256,6 +295,12 @@ class TicketServiceTest {
         assertEquals(2, ticket.getTicketFallbackMsg().size());
     }
 
+    /**
+     * Input: PNR "ABC123" with 3 calls (passenger numbers 1, 2, 3), all MongoDB
+     * connection timeouts
+     * ExpectedOut: Three succeeded Futures with fallback Tickets; circuit breaker
+     * records 3 errors
+     */
     @Test
     void testGetTicket_MultipleMongoErrors() {
         // Given - Test that circuit breaker tracks multiple errors
@@ -284,6 +329,11 @@ class TicketServiceTest {
         verify(circuitBreaker, times(3)).onError(anyLong(), eq(TimeUnit.NANOSECONDS), any());
     }
 
+    /**
+     * Input: PNR "ABC123", passenger number 1
+     * ExpectedOut: MongoDB query with passengerNumber as Integer type (type-safe,
+     * prevents injection)
+     */
     @Test
     void testGetTicket_ParameterizedQuery_TypeSafety() {
         // Given
