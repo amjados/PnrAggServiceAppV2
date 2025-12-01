@@ -28,6 +28,8 @@ import static org.mockito.Mockito.*;
  * Comprehensive unit tests for BookingAggregatorService
  * Coverage: Reactive patterns, parallel composition, fallback message
  * aggregation
+ * RequirementCategorized: Core Requirements (Reactive Programming & Data
+ * Aggregation)
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)

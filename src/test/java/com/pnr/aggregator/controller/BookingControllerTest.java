@@ -30,6 +30,7 @@ import static org.mockito.Mockito.*;
 /**
  * Comprehensive unit tests for BookingController
  * Coverage: Input validation, error handling, async response handling
+ * RequirementCategorized: Core DVT Requirement - REST API Endpoint (GET /booking/{pnr})
  */
 /**
  * -[@ExtendWith](MockitoExtension.class): Integrates Mockito with JUnit 5.

@@ -27,6 +27,8 @@ import static org.mockito.Mockito.*;
 /**
  * Comprehensive unit tests for BaggageService
  * Coverage: Circuit breaker, fallback with defaults, MongoDB operations
+ * RequirementCategorized: Core DVT Requirement - Source 2 (Baggage Allowance) &
+ * Bonus (Circuit Breaking)
  */
 @ExtendWith(MockitoExtension.class)
 class BaggageServiceTest {
@@ -47,10 +49,13 @@ class BaggageServiceTest {
 
     @BeforeEach
     void setUp() {
-        /* whyCodeAdded: Initialize circuit breaker mocks and test data for BaggageService tests
-         Sets up circuit breaker in CLOSED state to enable testing normal operations,
-         and creates valid baggage document with allowances to test MongoDB retrieval and fallback scenarios
-        */
+        /*
+         * whyCodeAdded: Initialize circuit breaker mocks and test data for
+         * BaggageService tests
+         * Sets up circuit breaker in CLOSED state to enable testing normal operations,
+         * and creates valid baggage document with allowances to test MongoDB retrieval
+         * and fallback scenarios
+         */
         // Mock circuit breaker registry
         when(circuitBreakerRegistry.circuitBreaker("baggageServiceCB")).thenReturn(circuitBreaker);
         when(circuitBreaker.getName()).thenReturn("baggageServiceCB");

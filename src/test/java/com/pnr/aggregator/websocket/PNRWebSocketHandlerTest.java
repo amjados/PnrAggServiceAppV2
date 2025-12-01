@@ -25,6 +25,7 @@ import static org.mockito.Mockito.*;
 /**
  * Unit tests for PNRWebSocketHandler
  * Coverage: WebSocket lifecycle, event broadcasting, error handling
+ * RequirementCategorized: Bonus Feature #4 - WebSocket Broadcasting (Real-time PNR fetched events)
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)

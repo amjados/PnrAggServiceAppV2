@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for custom exception classes
+ * RequirementCategorized: Core DVT Requirement - Error Handling
  */
 class ExceptionTest {
 

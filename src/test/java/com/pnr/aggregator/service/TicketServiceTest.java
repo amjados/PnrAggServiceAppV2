@@ -25,6 +25,8 @@ import static org.mockito.Mockito.*;
 /**
  * Comprehensive unit tests for TicketService
  * Coverage: Circuit breaker, missing tickets, MongoDB operations
+ * RequirementCategorized: Core DVT Requirement - Source 3 (ETicket Information)
+ * & Bonus (Circuit Breaking)
  */
 @ExtendWith(MockitoExtension.class)
 class TicketServiceTest {
@@ -45,10 +47,13 @@ class TicketServiceTest {
 
     @BeforeEach
     void setUp() {
-        /* whyCodeAdded: Initialize circuit breaker mocks and test data for TicketService tests
-         Sets up circuit breaker in CLOSED state to enable testing normal operations,
-         and creates valid ticket document with URL to test MongoDB retrieval and missing ticket scenarios
-        */
+        /*
+         * whyCodeAdded: Initialize circuit breaker mocks and test data for
+         * TicketService tests
+         * Sets up circuit breaker in CLOSED state to enable testing normal operations,
+         * and creates valid ticket document with URL to test MongoDB retrieval and
+         * missing ticket scenarios
+         */
         // Mock circuit breaker registry
         when(circuitBreakerRegistry.circuitBreaker("ticketServiceCB")).thenReturn(circuitBreaker);
         when(circuitBreaker.getName()).thenReturn("ticketServiceCB");
