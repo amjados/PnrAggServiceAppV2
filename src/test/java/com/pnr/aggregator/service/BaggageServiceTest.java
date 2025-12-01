@@ -27,8 +27,8 @@ import static org.mockito.Mockito.*;
 /**
  * Comprehensive unit tests for BaggageService
  * Coverage: Circuit breaker, fallback with defaults, MongoDB operations
- * RequirementCategorized: Core DVT Requirement - Source 2 (Baggage Allowance) &
- * Bonus (Circuit Breaking)
+ * RequirementCategorized: Core Requirements (MongoDB Source 2 - Baggage
+ * Allowance) & Bonus Requirements (Circuit Breaking)
  */
 @ExtendWith(MockitoExtension.class)
 class BaggageServiceTest {

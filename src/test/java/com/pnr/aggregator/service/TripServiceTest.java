@@ -37,8 +37,8 @@ import static org.mockito.Mockito.*;
  * Comprehensive unit tests for TripService
  * Coverage: Circuit breaker patterns, MongoDB operations, caching, error
  * handling
- * RequirementCategorized: Core DVT Requirement - Source 1 (Trip Information) &
- * Bonus (Circuit Breaking)
+ * RequirementCategorized: Core Requirements (MongoDB Source 1 - Trip
+ * Information) & Bonus Requirements (Circuit Breaking)
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)

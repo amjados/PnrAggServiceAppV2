@@ -25,8 +25,8 @@ import static org.mockito.Mockito.*;
 /**
  * Comprehensive unit tests for TicketService
  * Coverage: Circuit breaker, missing tickets, MongoDB operations
- * RequirementCategorized: Core DVT Requirement - Source 3 (ETicket Information)
- * & Bonus (Circuit Breaking)
+ * RequirementCategorized: Core Requirements (MongoDB Source 3 - ETicket
+ * Information) & Bonus Requirements (Circuit Breaking)
  */
 @ExtendWith(MockitoExtension.class)
 class TicketServiceTest {

@@ -26,7 +26,8 @@ import static org.mockito.Mockito.*;
 /**
  * Unit tests for Customer ID endpoint
  * Coverage: Search by customer ID, multiple bookings, error handling
- * RequirementCategorized: Bonus Feature #1 - Customer ID Endpoint (Hide data in path param)
+ * RequirementCategorized: Bonus Requirements (Customer ID Endpoint - Hide data
+ * in path param)
  */
 @ExtendWith(MockitoExtension.class)
 class CustomerIdEndpointTest {
