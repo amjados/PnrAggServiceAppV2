@@ -16,8 +16,7 @@
 # ============================================================================
 
 param(
-    [string]$BaseUrl = "http://localhost:8080",
-    [string]$PNR = "GHTW42"
+    [string]$BaseUrl = "http://localhost:8080"
 )
 
 $results = @()
@@ -34,13 +33,17 @@ function Run-TestRequests {
         [string]$Description
     )
     
+    $pnrList = @("GHTW42", "ABC123")
+    
     Write-Host "`n$Description" -ForegroundColor Cyan
     for ($i = $Start; $i -le $End; $i++) {
-        Write-Host "Request $i/21: " -NoNewline -ForegroundColor Yellow
+        # Randomly select PNR
+        $selectedPNR = $pnrList | Get-Random
+        Write-Host "Request $i/21 [PNR: $selectedPNR]: " -NoNewline -ForegroundColor Yellow
         
         $startTime = Get-Date
         try {
-            $response = Invoke-RestMethod -Uri "$BaseUrl/booking/$PNR" -Method Get -TimeoutSec 10 -ErrorAction Stop
+            $response = Invoke-RestMethod -Uri "$BaseUrl/booking/$selectedPNR" -Method Get -TimeoutSec 10 -ErrorAction Stop
             $endTime = Get-Date
             $duration = ($endTime - $startTime).TotalSeconds
             
@@ -121,7 +124,6 @@ Write-Host "============================================" -ForegroundColor Cyan
 Write-Host "Circuit Breaker Test" -ForegroundColor Cyan
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host "Base URL: $BaseUrl" -ForegroundColor Yellow
-Write-Host "PNR: $PNR" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "Test Phases:" -ForegroundColor Yellow
 Write-Host "  Phase 1 (Requests 1-5):   MongoDB UP → Expect SUCCESS" -ForegroundColor Gray

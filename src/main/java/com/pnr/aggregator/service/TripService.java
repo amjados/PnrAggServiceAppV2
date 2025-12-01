@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * -@Service: Marks this class as a Spring service component.
@@ -253,5 +254,50 @@ public class TripService {
         trip.setFlights(flights);
 
         return trip;
+    }
+
+    /**
+     * Get all trips for a specific customer ID
+     * 
+     * Searches MongoDB for trips where any passenger has the given customerId
+     * Uses MongoDB query: { "passengers.customerId": customerId }
+     * 
+     * NoSQL Injection Prevention:
+     * - Uses parameterized query with validated input
+     * - customerId validated at controller level
+     * 
+     * -@param customerId The customer identifier to search for
+     * -@return Future with list of trips matching the customer ID
+     */
+    public Future<List<Trip>> getTripsByCustomerId(String customerId) {
+        log.info("Searching trips for Customer ID: {}", customerId);
+
+        Promise<List<Trip>> promise = Promise.promise();
+
+        // Query for trips where any passenger has this customerId
+        JsonObject query = new JsonObject().put("passengers.customerId", customerId);
+
+        mongoClient.find("trips", query, ar -> {
+            if (ar.succeeded()) {
+                List<JsonObject> results = ar.result();
+
+                if (results.isEmpty()) {
+                    log.info("No trips found for Customer ID: {}", customerId);
+                    promise.complete(List.of());
+                } else {
+                    List<Trip> trips = results.stream()
+                            .map(this::mapToTrip)
+                            .collect(Collectors.toList());
+
+                    log.info("Found {} trip(s) for Customer ID: {}", trips.size(), customerId);
+                    promise.complete(trips);
+                }
+            } else {
+                log.error("MongoDB error searching trips for Customer ID: {}", customerId, ar.cause());
+                promise.fail(ar.cause());
+            }
+        });
+
+        return promise.future();
     }
 }

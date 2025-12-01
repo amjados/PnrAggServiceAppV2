@@ -152,6 +152,37 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <!-- Vert.x JUnit 5 - Testing support for Vert.x async code -->
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-junit5</artifactId>
+            <version>${vertx.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Mockito JUnit Jupiter - For mocking in tests -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Awaitility - For testing async code -->
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <version>4.2.0</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Embedded MongoDB - For integration testing -->
+        <dependency>
+            <groupId>de.flapdoodle.embed</groupId>
+            <artifactId>de.flapdoodle.embed.mongo</artifactId>
+            <version>4.7.0</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -170,6 +201,24 @@
                             <artifactId>lombok</artifactId>
                         </exclude>
                     </excludes>
+                </configuration>
+            </plugin>
+
+            <!-- 
+                Maven Surefire Plugin - Unit Test Runner
+                Executes JUnit tests and generates test reports
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+                <configuration>
+                    <!-- Include all test classes -->
+                    <includes>
+                        <include>**/*Test.java</include>
+                    </includes>
+                    <!-- Report test results -->
+                    <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
                 </configuration>
             </plugin>
         </plugins>

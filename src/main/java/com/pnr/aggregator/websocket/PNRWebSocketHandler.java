@@ -111,4 +111,12 @@ public class PNRWebSocketHandler extends TextWebSocketHandler {
             }
         });
     }
+
+    /**
+     * Get active sessions (for testing purposes)
+     * -@return Set of active WebSocket sessions
+     */
+    public Set<WebSocketSession> getSessions() {
+        return sessionsSet;
+    }
 }

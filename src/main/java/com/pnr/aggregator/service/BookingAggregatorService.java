@@ -259,4 +259,45 @@ public class BookingAggregatorService {
 
         vertx.eventBus().publish("pnr.fetched", event);
     }
+
+    /**
+     * Get all bookings for a specific customer ID
+     * 
+     * Searches for all trips where any passenger has the given customerId
+     * Then aggregates the booking details for each matching PNR
+     * 
+     * -@param customerId The customer identifier to search for
+     * -@return Future with list of complete booking responses
+     */
+    public Future<List<BookingResponse>> getBookingsByCustomerId(String customerId) {
+        log.info("Searching bookings for Customer ID: {}", customerId);
+
+        return tripService.getTripsByCustomerId(customerId)
+                .compose(trips -> {
+                    if (trips.isEmpty()) {
+                        log.info("No trips found for Customer ID: {}", customerId);
+                        return Future.succeededFuture(List.<BookingResponse>of());
+                    }
+
+                    // Aggregate booking details for each trip
+                    List<Future<BookingResponse>> bookingFutures = trips.stream()
+                            .map(trip -> aggregateBooking(trip.getBookingReference()))
+                            .collect(Collectors.toList());
+
+                    return Future.all(bookingFutures)
+                            .map(cf -> {
+                                List<BookingResponse> responses = bookingFutures.stream()
+                                        .map(Future::result)
+                                        .collect(Collectors.toList());
+                                return responses;
+                            });
+                })
+                .onSuccess(bookings -> {
+                    log.info("Successfully aggregated {} booking(s) for Customer ID: {}",
+                            bookings.size(), customerId);
+                })
+                .onFailure(error -> {
+                    log.error("Failed to aggregate bookings for Customer ID: {}", customerId, error);
+                });
+    }
 }

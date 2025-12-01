@@ -172,6 +172,65 @@ public class BookingController {
     }
 
     /**
+     * Get bookings by customer ID
+     * 
+     * [@param] customerId Customer identifier
+     * [@return] List of bookings for the customer
+     * 
+     * This endpoint searches for all bookings where the customerId matches
+     * any passenger in the booking. This allows customers to retrieve all
+     * their bookings across different PNRs.
+     */
+    @GetMapping("/customer/{customerId}")
+    public CompletableFuture<ResponseEntity<?>> getBookingsByCustomerId(
+            @PathVariable @Pattern(regexp = "^[A-Za-z0-9]{1,20}$", message = "Customer ID must be 1-20 alphanumeric characters") String customerId) {
+        log.info("Received request for Customer ID: {}", customerId);
+
+        CompletableFuture<ResponseEntity<?>> future = new CompletableFuture<>();
+
+        aggregatorService.getBookingsByCustomerId(customerId)
+                .onSuccess(bookings -> {
+                    log.info("Successfully processed {} booking(s) for Customer ID: {}", bookings.size(), customerId);
+
+                    if (bookings.isEmpty()) {
+                        Map<String, Object> response = new HashMap<>();
+                        response.put("customerId", customerId);
+                        response.put("bookings", bookings);
+                        response.put("message", "No bookings found for this customer");
+                        response.put("timestamp", Instant.now().toString());
+                        future.complete(ResponseEntity.ok(response));
+                    } else {
+                        Map<String, Object> response = new HashMap<>();
+                        response.put("customerId", customerId);
+                        response.put("bookings", bookings);
+                        response.put("count", bookings.size());
+                        response.put("timestamp", Instant.now().toString());
+                        future.complete(ResponseEntity.ok(response));
+                    }
+                })
+                .onFailure(error -> {
+                    log.error("Error processing bookings for Customer ID: {}", customerId, error);
+
+                    if (error instanceof ServiceUnavailableException) {
+                        Map<String, Object> errorResponse = new HashMap<>();
+                        errorResponse.put("error", "Service Unavailable");
+                        errorResponse.put("message",
+                                "Booking service temporarily unavailable. Please try again later.");
+                        errorResponse.put("timestamp", Instant.now().toString());
+                        future.complete(ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(errorResponse));
+                    } else {
+                        Map<String, Object> errorResponse = new HashMap<>();
+                        errorResponse.put("error", "Internal Server Error");
+                        errorResponse.put("message", "An unexpected error occurred");
+                        errorResponse.put("timestamp", Instant.now().toString());
+                        future.complete(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse));
+                    }
+                });
+
+        return future;
+    }
+
+    /**
      * -@ExceptionHandler(Exception.class): Global exception handler for this
      * controller
      * --Catches all uncaught exceptions from methods in this controller

@@ -49,6 +49,9 @@ buildNumber.properties
 !**/src/main/**/target/
 !**/src/test/**/target/
 
+# Test/Error data - exclude from repo
+mongo-init/init-mongo-test-errordata.js
+
 # Application logs
 logs/
 spring.log

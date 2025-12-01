@@ -26,7 +26,7 @@ public class BookingResponse {
     private List<FlightDTO> flights;
 
     // Degraded mode metadata
-    private Boolean fromCache;
+    private Boolean fromCache = false;
     private Instant cacheTimestamp;
 
     /**

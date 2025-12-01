@@ -39,6 +39,9 @@ desktop.ini
 md-files/
 docs/
 
+# Test/Error data (not for production)
+mongo-init/init-mongo-test-errordata.js
+
 # Docker files (no need to include in container)
 Dockerfile
 .dockerignore
