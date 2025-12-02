@@ -5,12 +5,13 @@ import com.pnr.aggregator.exception.ServiceUnavailableException;
 import com.pnr.aggregator.model.entity.Flight;
 import com.pnr.aggregator.model.entity.Passenger;
 import com.pnr.aggregator.model.entity.Trip;
+import com.pnr.aggregator.util.DataTypeConverter;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-//import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
@@ -21,7 +22,9 @@ import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -70,6 +73,16 @@ public class TripService {
     @Autowired
     private CircuitBreakerRegistry circuitBreakerRegistry;
 
+    /**
+     * -@Autowired: Dependency injection for Vert.x instance
+     * --Vert.x is configured in VertxConfig and injected here
+     * --Used for event bus communication and async operations
+     * --WithoutIT: vertx would be null;
+     * ---event broadcasting to WebSocket clients would fail.
+     */
+    @Autowired
+    private Vertx vertx;
+
     private CircuitBreaker circuitBreaker;
 
     /**
@@ -111,18 +124,28 @@ public class TripService {
      * Handle MongoDB query result for trip retrieval
      */
     private Promise<Trip> onTripResult(AsyncResult<JsonObject> ar, String pnr, long start, Promise<Trip> promise) {
-        {
-            long duration = System.nanoTime() - start;
 
-            if (ar.succeeded()) {
-                if (ar.result() == null) {
-                    log.warn("Trip not found for PNR: {}", pnr);
-                    circuitBreaker.onSuccess(duration, java.util.concurrent.TimeUnit.NANOSECONDS);
-                    promise.fail(new PNRNotFoundException("PNR not found: " + pnr));
-                } else {
-                    Trip trip = mapToTrip(ar.result());
+        long duration = System.nanoTime() - start;
+
+        if (ar.succeeded()) {
+            if (ar.result() == null) {
+                log.warn("Trip not found for PNR: {}", pnr);
+                circuitBreaker.onSuccess(duration, java.util.concurrent.TimeUnit.NANOSECONDS);
+                promise.fail(new PNRNotFoundException("PNR not found: " + pnr));
+                return promise;
+            }
+
+            // -----------------------------------------
+            // FIX: mapToTrip returns Future<Trip>, so wait for it
+            // -----------------------------------------
+            mapToTrip(ar.result()).onComplete(mapResult -> {
+
+                if (mapResult.succeeded()) {
+
+                    Trip trip = mapResult.result();
                     trip.setFromCache(false);
 
+                    // Cache it
                     Cache cache = cacheManager.getCache("trips");
                     if (cache != null) {
                         cache.put(pnr, trip);
@@ -132,20 +155,32 @@ public class TripService {
                     circuitBreaker.onSuccess(duration, java.util.concurrent.TimeUnit.NANOSECONDS);
                     promise.complete(trip);
                     log.info("Trip fetched successfully for PNR: {}", pnr);
-                }
-            } else {
-                log.error("MongoDB error fetching trip for PNR: {}", pnr, ar.cause());
-                circuitBreaker.onError(duration, java.util.concurrent.TimeUnit.NANOSECONDS, ar.cause());
 
-                getTripFallback(pnr, new Exception(ar.cause())).onComplete(fallbackResult -> {
-                    if (fallbackResult.succeeded()) {
-                        promise.complete(fallbackResult.result());
-                    } else {
-                        promise.fail(fallbackResult.cause());
-                    }
-                });
-            }
+                } else {
+                    // Parsing error
+                    log.error("Failed to map trip for PNR {}: {}", pnr, mapResult.cause().getMessage());
+                    circuitBreaker.onError(duration, java.util.concurrent.TimeUnit.NANOSECONDS, mapResult.cause());
+                    promise.fail(mapResult.cause());
+                }
+
+            });
+
+        } else {
+            // -------------------------
+            // MongoDB error handling
+            // -------------------------
+            log.error("MongoDB error fetching trip for PNR: {}", pnr, ar.cause());
+            circuitBreaker.onError(duration, java.util.concurrent.TimeUnit.NANOSECONDS, ar.cause());
+
+            getTripFallback(pnr, new Exception(ar.cause())).onComplete(fallbackResult -> {
+                if (fallbackResult.succeeded()) {
+                    promise.complete(fallbackResult.result());
+                } else {
+                    promise.fail(fallbackResult.cause());
+                }
+            });
         }
+
         return promise;
     }
 
@@ -217,14 +252,20 @@ public class TripService {
                 new ServiceUnavailableException("Trip service temporarily unavailable"));
     }
 
-    private Trip mapToTrip(JsonObject doc) {
+    private Future<Trip> mapToTrip(JsonObject doc) {
+
+        Promise<Trip> tripPromise = Promise.promise();
+
         Trip trip = new Trip();
         trip.setBookingReference(doc.getString("bookingReference"));
         trip.setCabinClass(doc.getString("cabinClass"));
 
-        // Map passengers
+        // -----------------------------
+        // Map Passengers (sync)
+        // -----------------------------
         JsonArray passengersArray = doc.getJsonArray("passengers");
         List<Passenger> passengers = new ArrayList<>();
+
         for (int i = 0; i < passengersArray.size(); i++) {
             JsonObject p = passengersArray.getJsonObject(i);
             Passenger passenger = new Passenger();
@@ -234,26 +275,67 @@ public class TripService {
             passenger.setPassengerNumber(p.getInteger("passengerNumber"));
             passenger.setCustomerId(p.getString("customerId"));
             passenger.setSeat(p.getString("seat"));
+
             passengers.add(passenger);
         }
+
         trip.setPassengers(passengers);
 
-        // Map flights
+        // -----------------------------
+        // Map Flights (async date parsing)
+        // -----------------------------
         JsonArray flightsArray = doc.getJsonArray("flights");
         List<Flight> flights = new ArrayList<>();
+        List<Future<?>> dateParsingFutures = new ArrayList<>();
+
         for (int i = 0; i < flightsArray.size(); i++) {
+
             JsonObject f = flightsArray.getJsonObject(i);
             Flight flight = new Flight();
+
             flight.setFlightNumber(f.getString("flightNumber"));
             flight.setDepartureAirport(f.getString("departureAirport"));
-            flight.setDepartureTimeStamp(f.getString("departureTimeStamp"));
             flight.setArrivalAirport(f.getString("arrivalAirport"));
+            flight.setDepartureTimeStamp(f.getString("departureTimeStamp"));
             flight.setArrivalTimeStamp(f.getString("arrivalTimeStamp"));
+
             flights.add(flight);
+
+            // Parse departure timestamp
+            Future<LocalDateTime> depFuture = DataTypeConverter
+                    .timestampsToDateLocal(vertx, flight.getDepartureTimeStamp())
+                    .onSuccess(flight::setDepartureDateTime)
+                    .onFailure(err -> log.error("Failed to parse departure timestamp for flight {}: {}",
+                            flight.getFlightNumber(), err.getMessage()));
+
+            // Parse arrival timestamp
+            Future<LocalDateTime> arrFuture = DataTypeConverter
+                    .timestampsToDateLocal(vertx, flight.getArrivalTimeStamp())
+                    .onSuccess(flight::setArrivalDateTime)
+                    .onFailure(err -> log.error("Failed to parse arrival timestamp for flight {}: {}",
+                            flight.getFlightNumber(), err.getMessage()));
+
+            dateParsingFutures.add(depFuture);
+            dateParsingFutures.add(arrFuture);
         }
+
         trip.setFlights(flights);
 
-        return trip;
+        // -----------------------------
+        // Wait for ALL async timestamp parsing to complete
+        // -----------------------------
+        Future.all(dateParsingFutures)
+                .onSuccess(v -> {
+                    log.debug("All flight date-times parsed for booking {}", trip.getBookingReference());
+                    tripPromise.complete(trip);
+                })
+                .onFailure(err -> {
+                    log.error("Failed parsing timestamps for trip {}: {}",
+                            trip.getBookingReference(), err.getMessage());
+                    tripPromise.fail(err);
+                });
+
+        return tripPromise.future();
     }
 
     /**
@@ -286,7 +368,7 @@ public class TripService {
         }
 
         long start = System.nanoTime();
-        Promise<List<Trip>> promise = Promise.promise();
+        Promise<List<Trip>> tripPromiseList = Promise.promise();
 
         // Query for trips where any passenger has this customerId
         JsonObject query = new JsonObject().put("passengers.customerId", customerId);
@@ -300,23 +382,57 @@ public class TripService {
                 if (results.isEmpty()) {
                     log.info("No trips found for Customer ID: {}", customerId);
                     circuitBreaker.onSuccess(duration, java.util.concurrent.TimeUnit.NANOSECONDS);
-                    promise.complete(List.of());
+                    tripPromiseList.complete(List.of());
                 } else {
-                    List<Trip> trips = results.stream()
-                            .map(this::mapToTrip)
-                            .peek(trip -> trip.setFromCache(false))
+                    // Step 1: Convert each JsonObject -> Future<Trip>
+                    List<Future<?>> tripFuturesList = results.stream()
+                            .map(this::mapToTrip) // returns Future<Trip>
                             .collect(Collectors.toList());
 
-                    // Cache the trips list for this customer ID
-                    Cache cache = cacheManager.getCache("tripsByCustomer");
-                    if (cache != null) {
-                        cache.put(customerId, trips);
-                        log.debug("Cached {} trip(s) for Customer ID: {}", trips.size(), customerId);
-                    }
+                    // Step 2: Wait until ALL trips (and their async date parsing) complete
+                    Future.all(tripFuturesList)
+                            .onSuccess(cf -> {
 
-                    circuitBreaker.onSuccess(duration, java.util.concurrent.TimeUnit.NANOSECONDS);
-                    log.info("Found {} trip(s) for Customer ID: {}", trips.size(), customerId);
-                    promise.complete(trips);
+                                // Extract actual Trip objects
+                                List<Trip> tripList = cf.list();
+
+                                // Mark as not from cache
+                                tripList.forEach(t -> t.setFromCache(false));
+
+                                log.info("------>Processing {} trips for Customer ID: {}", tripList.size(), customerId);
+
+                                // Filter for upcoming trips and sort by earliest departure
+                                List<Trip> upcomingTrips = tripList.stream()
+                                        .filter(this::hasUpcomingFlights)
+                                        .collect(Collectors.toList());
+
+                                log.info("------>Filtered to {} upcoming trips for Customer ID: {}",
+                                        upcomingTrips.size(),
+                                        customerId);
+
+                                // Step 4: Cache upcoming trips
+                                Cache cache = cacheManager.getCache("tripsByCustomer");
+                                if (cache != null) {
+                                    cache.put(customerId, upcomingTrips);
+                                    log.info("------>Cached {} trip(s) for Customer ID: {}", upcomingTrips.size(),
+                                            customerId);
+                                }
+
+                                // Circuit breaker OK
+                                circuitBreaker.onSuccess(duration, java.util.concurrent.TimeUnit.NANOSECONDS);
+
+                                log.info("Found {} trip(s) for Customer ID: {}", upcomingTrips.size(), customerId);
+
+                                // Step 5: Final response
+                                tripPromiseList.complete(upcomingTrips);
+
+                            })
+                            .onFailure(err -> {
+                                log.error("Failed to process trips for customer {}: {}", customerId, err.getMessage());
+                                circuitBreaker.onError(duration, java.util.concurrent.TimeUnit.NANOSECONDS, err);
+                                tripPromiseList.fail(err);
+                            });
+
                 }
             } else {
                 log.error("MongoDB error searching trips for Customer ID: {}", customerId, ar.cause());
@@ -324,15 +440,15 @@ public class TripService {
 
                 getTripsByCustomerIdFallback(customerId, new Exception(ar.cause())).onComplete(fallbackResult -> {
                     if (fallbackResult.succeeded()) {
-                        promise.complete(fallbackResult.result());
+                        tripPromiseList.complete(fallbackResult.result());
                     } else {
-                        promise.fail(fallbackResult.cause());
+                        tripPromiseList.fail(fallbackResult.cause());
                     }
                 });
             }
         });
 
-        return promise.future();
+        return tripPromiseList.future();
     }
 
     /**
@@ -379,5 +495,23 @@ public class TripService {
                 new ServiceUnavailableException("Trip service temporarily unavailable for customer " + customerId));
     }
 
-    
+    // /**
+    // * Sort flights within a trip by departure date/time
+    // *
+    // * @param trip The trip whose flights should be sorted
+    // */
+    // private void sortFlightsByDeparture(Trip trip) {
+    // trip.getFlights().sort(Comparator.comparing(Flight::getDepartureDateTime));
+    // }
+
+    /**
+     * Check if a trip has any upcoming flights
+     * 
+     * @param trip The trip to check
+     * @return true if the trip has at least one flight departing after now
+     */
+    private boolean hasUpcomingFlights(Trip trip) {
+        return trip.getFlights().stream()
+                .anyMatch(flight -> flight.getDepartureDateTime().isAfter(LocalDateTime.now()));
+    }
 }

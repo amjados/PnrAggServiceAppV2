@@ -226,11 +226,11 @@
 
                 // Also log to WebSocket messages if connected
                 if (ws && ws.readyState === WebSocket.OPEN) {
-                    addMessage('📋 API Response received from: ' + apiUrl, 'success');
+                    addMessage('API Response received from: ' + apiUrl, 'success');
                 }
             } catch (error) {
                 resultBox.textContent = `Error: ${error.message}`;
-                addMessage('❌ API request failed: ' + error.message, 'error');
+                addMessage('API request failed: ' + error.message, 'error');
             }
         }
 
@@ -242,21 +242,21 @@
                 ws = new WebSocket(url);
 
                 ws.onopen = function () {
-                    addMessage('✓ Connected successfully!', 'success');
+                    addMessage('Connected successfully!', 'success');
                     updateStatus(true);
                 };
 
                 ws.onmessage = function (event) {
                     try {
                         const data = JSON.parse(event.data);
-                        addMessage('📨 Received: ' + JSON.stringify(data, null, 2), 'message');
+                        addMessage('Received: ' + JSON.stringify(data, null, 2), 'message');
                     } catch (e) {
-                        addMessage('📨 Received: ' + event.data, 'message');
+                        addMessage('Received: ' + event.data, 'message');
                     }
                 };
 
                 ws.onerror = function (error) {
-                    addMessage('❌ WebSocket error occurred', 'error');
+                    addMessage('WebSocket error occurred', 'error');
                     console.error('WebSocket error:', error);
                 };
 
@@ -266,7 +266,7 @@
                 };
 
             } catch (error) {
-                addMessage('❌ Failed to connect: ' + error.message, 'error');
+                addMessage('Failed to connect: ' + error.message, 'error');
             }
         }
 
@@ -284,7 +284,7 @@
             const disconnectBtn = document.getElementById('disconnectBtn');
 
             if (connected) {
-                statusDiv.textContent = 'Connected ✓';
+                statusDiv.textContent = 'Connected';
                 statusDiv.className = 'status connected';
                 connectBtn.disabled = true;
                 disconnectBtn.disabled = false;

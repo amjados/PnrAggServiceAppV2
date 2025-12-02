@@ -536,7 +536,7 @@ class BookingAggregatorServiceTest {
         when(ticketService.getTicket(anyString(), anyInt())).thenReturn(Future.failedFuture("Not found"));
 
         // When
-        Future<List<BookingResponse>> future = aggregatorService.getBookingsByCustomerId("C12345");
+        Future<List<BookingResponse>> future = aggregatorService.aggregateBookingByCustomerId("C12345");
 
         // Then
         assertTrue(future.succeeded());
@@ -558,7 +558,7 @@ class BookingAggregatorServiceTest {
                 .thenReturn(Future.succeededFuture(List.of()));
 
         // When
-        Future<List<BookingResponse>> future = aggregatorService.getBookingsByCustomerId("C99999");
+        Future<List<BookingResponse>> future = aggregatorService.aggregateBookingByCustomerId("C99999");
 
         // Then
         assertTrue(future.succeeded());
@@ -580,7 +580,7 @@ class BookingAggregatorServiceTest {
                 .thenReturn(Future.failedFuture(new RuntimeException("MongoDB error")));
 
         // When
-        Future<List<BookingResponse>> future = aggregatorService.getBookingsByCustomerId("C12345");
+        Future<List<BookingResponse>> future = aggregatorService.aggregateBookingByCustomerId("C12345");
 
         // Then
         assertTrue(future.failed());
@@ -606,7 +606,7 @@ class BookingAggregatorServiceTest {
                 .thenReturn(Future.failedFuture(new RuntimeException("Aggregation failed")));
 
         // When
-        Future<List<BookingResponse>> future = aggregatorService.getBookingsByCustomerId("C12345");
+        Future<List<BookingResponse>> future = aggregatorService.aggregateBookingByCustomerId("C12345");
 
         // Then
         assertTrue(future.failed());
@@ -640,7 +640,7 @@ class BookingAggregatorServiceTest {
         when(ticketService.getTicket(anyString(), anyInt())).thenReturn(Future.failedFuture("Not found"));
 
         // When
-        Future<List<BookingResponse>> future = aggregatorService.getBookingsByCustomerId("C12345");
+        Future<List<BookingResponse>> future = aggregatorService.aggregateBookingByCustomerId("C12345");
 
         // Then
         assertTrue(future.succeeded());

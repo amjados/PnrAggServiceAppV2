@@ -160,6 +160,7 @@ logging:
   level:
     root: WARN
     '[com.pnr.aggregator]': WARN
+    '[com.pnr.aggregator.service.TripService]': DEBUG
     '[com.pnr.aggregator.util]': DEBUG
     '[com.pnr.aggregator.config]': DEBUG
     '[io.vertx]': WARN

@@ -262,28 +262,6 @@ Run the PowerShell test script for comprehensive circuit breaker testing:
 - Phase 2: Circuit opens, fast-fail with fallback data
 - Phase 3: Circuit recovers (OPEN → HALF_OPEN → CLOSED)
 
-### Manual Test
-
-```bash
-# Stop MongoDB to simulate failure
-docker-compose stop mongodb
-
-# Make requests to trigger circuit breaker
-for i in {1..15}; do
-  curl http://localhost:8080/booking/GHTW42
-  sleep 1
-done
-
-# Restart MongoDB
-docker-compose start mongodb
-```
-
-**Expected behavior:**
-- Initial requests fail slowly (database timeout)
-- Circuit opens after failure threshold
-- Subsequent requests fail fast with fallback data
-- Circuit recovers after MongoDB restart
-
 ## Monitoring
 
 ### Health Endpoints
@@ -341,3 +319,135 @@ src/main/java/com/pnr/aggregator/
 - **Redis 7** - Cache
 - **Maven 3.9** - Build tool
 - **Docker** - Containerization
+
+---
+
+## Future Improvements (TODO)
+
+### Redis Cache Operations Optimization
+
+**Current State:**
+The application uses Spring Cache abstraction with synchronous Redis operations:
+```java
+cache.get(pnr, Trip.class)  // Synchronous Redis access
+cache.put(pnr, trip)        // Synchronous Redis write
+```
+
+**Issue:**
+While Redis operations are extremely fast (< 1ms), they are technically blocking and not 100% aligned with Vert.x event-loop model.
+
+**Proposed Solutions:**
+
+#### **Option 1: Hybrid Approach (Quick Win - Recommended)**
+Move cache operations to Vert.x worker threads to keep event loop non-blocking:
+
+```java
+private Future<Trip> getTripFallback(String pnr, Exception ex) {
+    return vertx.executeBlocking(promise -> {
+        Cache cache = cacheManager.getCache("trips");
+        if (cache != null) {
+            Trip cachedTrip = cache.get(pnr, Trip.class);
+            if (cachedTrip != null) {
+                cachedTrip.setFromCache(true);
+                promise.complete(cachedTrip);
+                return;
+            }
+        }
+        promise.fail(new ServiceUnavailableException("No cache available"));
+    }, false);
+}
+```
+
+**Benefits:**
+- Simple to implement (minimal code changes)
+- No new dependencies required
+- Event loop stays non-blocking
+- Keeps existing cache configuration
+
+#### **Option 2: Full Reactive Redis (100% Async)**
+Replace Spring Cache with Lettuce Reactive Redis client:
+
+**Add Dependencies:**
+```xml
+<dependency>
+    <groupId>io.lettuce</groupId>
+    <artifactId>lettuce-core</artifactId>
+</dependency>
+```
+
+**Create Reactive Redis Configuration:**
+```java
+@Configuration
+public class ReactiveRedisConfig {
+    
+    @Bean
+    public ReactiveRedisTemplate<String, Object> reactiveRedisTemplate(
+            ReactiveRedisConnectionFactory factory) {
+        
+        Jackson2JsonRedisSerializer<Object> serializer = 
+            new Jackson2JsonRedisSerializer<>(Object.class);
+        
+        RedisSerializationContext<String, Object> context = 
+            RedisSerializationContext.<String, Object>newSerializationContext()
+                .key(StringRedisSerializer.UTF_8)
+                .value(serializer)
+                .hashKey(StringRedisSerializer.UTF_8)
+                .hashValue(serializer)
+                .build();
+        
+        return new ReactiveRedisTemplate<>(factory, context);
+    }
+}
+```
+
+**Replace Cache Operations:**
+```java
+@Autowired
+private ReactiveRedisTemplate<String, Object> reactiveRedis;
+
+// Async cache read
+private Future<Trip> getCachedTrip(String pnr) {
+    Promise<Trip> promise = Promise.promise();
+    
+    reactiveRedis.opsForValue()
+        .get("trips:" + pnr)
+        .timeout(Duration.ofMillis(500))
+        .subscribe(
+            value -> {
+                if (value != null) {
+                    promise.complete((Trip) value);
+                } else {
+                    promise.fail("Cache miss");
+                }
+            },
+            error -> promise.fail(error),
+            () -> promise.fail("Cache miss")
+        );
+    
+    return promise.future();
+}
+
+// Async cache write (fire and forget)
+private Future<Void> cacheTrip(String pnr, Trip trip) {
+    Promise<Void> promise = Promise.promise();
+    
+    reactiveRedis.opsForValue()
+        .set("trips:" + pnr, trip, Duration.ofMinutes(10))
+        .subscribe(
+            success -> promise.complete(),
+            error -> {
+                log.warn("Failed to cache trip: {}", error.getMessage());
+                promise.complete(); // Don't fail main operation
+            }
+        );
+    
+    return promise.future();
+}
+```
+
+**Benefits:**
+- Fully non-blocking and reactive
+- 100% aligned with Vert.x model
+- True async everywhere
+
+---

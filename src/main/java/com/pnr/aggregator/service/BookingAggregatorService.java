@@ -96,11 +96,11 @@ public class BookingAggregatorService {
      * -@return Future with list of complete booking responses (includes all
      * passengers per booking)
      */
-    public Future<List<BookingResponse>> getBookingsByCustomerId(String customerId) {
+    public Future<List<BookingResponse>> aggregateBookingByCustomerId(String customerId) {
         log.info("Searching bookings for Customer ID: {}", customerId);
 
         // Reactive: Get trips and extract PNRs without blocking
-        return tripService.getTripsByCustomerId(customerId)
+        Future<List<BookingResponse>> bookingResponseFutureList = tripService.getTripsByCustomerId(customerId)
                 .compose(trips -> {
                     if (trips.isEmpty()) {
                         log.info("No trips found for Customer ID: {}", customerId);
@@ -108,14 +108,13 @@ public class BookingAggregatorService {
                     }
 
                     // Extract PNRs and initiate parallel aggregation
-                    List<String> pnrs = trips.stream()
+                    List<String> pnrList = trips.stream()
                             .map(trip -> trip.getBookingReference())
                             .collect(Collectors.toList());
 
-                    log.debug("Found {} PNR(s) for Customer ID: {}: {}", pnrs.size(), customerId, pnrs);
-
+                    log.debug("Found {} PNR(s) for Customer ID: {}: {}", pnrList.size(), customerId, pnrList);
                     // Reactive: Aggregate all bookings in parallel
-                    List<Future<BookingResponse>> bookingFutures = pnrs.stream()
+                    List<Future<BookingResponse>> bookingFutures = pnrList.stream()
                             .map(this::aggregateBooking)
                             .collect(Collectors.toList());
 
@@ -131,6 +130,33 @@ public class BookingAggregatorService {
                 })
                 .onFailure(error -> {
                     log.error("Failed to aggregate bookings for Customer ID: {}", customerId, error);
+                });
+        return bookingResponseFutureList;
+    }
+
+    private Future<BookingResponse> tripComposeHandler(Trip trip, String pnr) {
+
+        // PARALLEL: Fetch baggage + all tickets
+        Future<Baggage> baggageFuture = baggageService.getBaggageInfo(pnr);
+
+        // PARALLEL: Fetch tickets for each passenger
+        List<Future<Ticket>> ticketFutures = trip.getPassengers().stream()
+                .map(p -> ticketService.getTicket(pnr, p.getPassengerNumber())
+                        .recover(err -> {
+                            // Missing ticket is OK - not all passengers have tickets
+                            log.debug("Ticket not found for passenger {}, continuing",
+                                    p.getPassengerNumber());
+                            return Future.succeededFuture(null);
+                        }))
+                .collect(Collectors.toList());
+
+        // Wait for all parallel operations
+        // CompositeFuture.all()
+        return Future.all(baggageFuture, Future.all(ticketFutures))
+                .map(cf -> {
+                    BookingResponse response = mergeData(trip, baggageFuture.result(), ticketFutures);
+                    publishPnrEvent(pnr, response.getStatus());
+                    return response;
                 });
     }
 
@@ -148,30 +174,7 @@ public class BookingAggregatorService {
         log.info("Aggregating booking for PNR: {}", pnr);
 
         return tripService.getTripInfo(pnr)
-                .compose(trip -> {
-                    // PARALLEL: Fetch baggage + all tickets
-                    Future<Baggage> baggageFuture = baggageService.getBaggageInfo(pnr);
-
-                    // PARALLEL: Fetch tickets for each passenger
-                    List<Future<Ticket>> ticketFutures = trip.getPassengers().stream()
-                            .map(p -> ticketService.getTicket(pnr, p.getPassengerNumber())
-                                    .recover(err -> {
-                                        // Missing ticket is OK - not all passengers have tickets
-                                        log.debug("Ticket not found for passenger {}, continuing",
-                                                p.getPassengerNumber());
-                                        return Future.succeededFuture(null);
-                                    }))
-                            .collect(Collectors.toList());
-
-                    // Wait for all parallel operations
-                    // CompositeFuture.all()
-                    return Future.all(baggageFuture, Future.all(ticketFutures))
-                            .map(cf -> {
-                                BookingResponse response = mergeData(trip, baggageFuture.result(), ticketFutures);
-                                publishPnrEvent(pnr, response.getStatus());
-                                return response;
-                            });
-                })
+                .compose(trip -> tripComposeHandler(trip, pnr))
                 .onSuccess(response -> {
                     log.info("Successfully aggregated booking for PNR: {} with status: {}", pnr, response.getStatus());
                 })

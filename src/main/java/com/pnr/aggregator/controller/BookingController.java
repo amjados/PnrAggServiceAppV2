@@ -2,6 +2,7 @@ package com.pnr.aggregator.controller;
 
 import com.pnr.aggregator.exception.PNRNotFoundException;
 import com.pnr.aggregator.exception.ServiceUnavailableException;
+import com.pnr.aggregator.model.dto.BookingResponse;
 import com.pnr.aggregator.service.BookingAggregatorService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 /**
  * -@RestController: Combines [@Controller] and [@ResponseBody].
@@ -188,7 +190,7 @@ public class BookingController {
 
         CompletableFuture<ResponseEntity<?>> future = new CompletableFuture<>();
 
-        aggregatorService.getBookingsByCustomerId(customerId)
+        aggregatorService.aggregateBookingByCustomerId(customerId)
                 .onSuccess(bookings -> {
                     log.info("Successfully processed {} booking(s) for Customer ID: {}", bookings.size(), customerId);
 
@@ -200,11 +202,60 @@ public class BookingController {
                         response.put("timestamp", Instant.now().toString());
                         future.complete(ResponseEntity.ok(response));
                     } else {
+                        // -------------------------------------------------------------
+                        // STATISTICS AGGREGATION: Group bookings for analytics
+                        // -------------------------------------------------------------
+                        
+                        // Group 1: Count total passengers per PNR
+                        // Example: {"ABC123" -> 3, "XYZ789" -> 2} means ABC123 has 3 passengers
+                        Map<String, Long> groupingByPnrResult = bookings.stream()
+                                .collect(Collectors.groupingBy(
+                                        BookingResponse::getPnr,
+                                        Collectors.summingLong(booking -> booking.getPassengers().size())));
+                        
+                        // Group 2: Count number of bookings per customer
+                        // Flattens all passengers from all bookings, removes duplicates within each booking,
+                        // then counts how many bookings each customer appears in
+                        // Example: {"1021" -> 2, "1022" -> 1} means customer 1021 has 2 bookings
+                        Map<String, Long> groupingByCustomerIdResult = bookings.stream()
+                                .flatMap(b -> b.getPassengers().stream()
+                                        .map(p -> p.getCustomerId())
+                                        .distinct() // avoid duplicate customerId inside same booking
+                        )
+                                .collect(Collectors.groupingBy(id -> id, Collectors.counting()));
+
+                        // Transform statistics into API response format with labeled keys
+                        // Converts {"ABC123" -> 3} to {"PRN:ABC123" -> {"TotalPassengers": 3}}
+                        Map<String, Map<String, Long>> groupingByPnrResult2 = groupingByPnrResult.entrySet().stream()
+                                .collect(Collectors.toMap(
+                                        e -> "PRN:" + e.getKey(),
+                                        e -> Map.of("TotalPassengers", e.getValue())));
+
+                        // Converts {"1021" -> 2} to {"CustomerID:1021" -> {"TotalBookings": 2}}
+                        Map<String, Map<String, Long>> groupingByCustomerIdResult2 = groupingByCustomerIdResult
+                                .entrySet().stream()
+                                .collect(Collectors.toMap(
+                                        e -> "CustomerID:" + e.getKey(),
+                                        e -> Map.of("TotalBookings", e.getValue())));
+
+                        /*
+                         * .entrySet().stream()
+                         * .sorted(Map.Entry.comparingByKey()) // sorting ASC by number
+                         * .collect(Collectors.toMap(
+                         * Map.Entry::getKey,
+                         * Map.Entry::getValue,
+                         * (a, b) -> a,
+                         * LinkedHashMap::new // keep sorted order
+                         * ));
+                         */
+
                         Map<String, Object> response = new HashMap<>();
                         response.put("customerId", customerId);
                         response.put("bookings", bookings);
                         response.put("count", bookings.size());
                         response.put("timestamp", Instant.now().toString());
+                        response.put("groupingByPnr", groupingByPnrResult2);
+                        response.put("groupingByCustomerId", groupingByCustomerIdResult2);
                         future.complete(ResponseEntity.ok(response));
                     }
                 })

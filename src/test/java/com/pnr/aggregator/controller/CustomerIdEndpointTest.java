@@ -72,7 +72,7 @@ class CustomerIdEndpointTest {
     @Test
     void testGetBookingsByCustomerId_Success() throws ExecutionException, InterruptedException {
         // Given
-        when(aggregatorService.getBookingsByCustomerId("C12345"))
+        when(aggregatorService.aggregateBookingByCustomerId("C12345"))
                 .thenReturn(Future.succeededFuture(mockBookings));
 
         // When
@@ -96,7 +96,7 @@ class CustomerIdEndpointTest {
         List<BookingResponse> bookings = (List<BookingResponse>) responseBody.get("bookings");
         assertEquals(2, bookings.size());
 
-        verify(aggregatorService).getBookingsByCustomerId("C12345");
+        verify(aggregatorService).aggregateBookingByCustomerId("C12345");
     }
 
     /**
@@ -107,7 +107,7 @@ class CustomerIdEndpointTest {
     @Test
     void testGetBookingsByCustomerId_NoBookingsFound() throws ExecutionException, InterruptedException {
         // Given
-        when(aggregatorService.getBookingsByCustomerId("C99999"))
+        when(aggregatorService.aggregateBookingByCustomerId("C99999"))
                 .thenReturn(Future.succeededFuture(List.of()));
 
         // When
@@ -137,7 +137,7 @@ class CustomerIdEndpointTest {
     @Test
     void testGetBookingsByCustomerId_ServiceUnavailable() throws ExecutionException, InterruptedException {
         // Given
-        when(aggregatorService.getBookingsByCustomerId("C12345"))
+        when(aggregatorService.aggregateBookingByCustomerId("C12345"))
                 .thenReturn(Future.failedFuture(
                         new ServiceUnavailableException("Service temporarily unavailable")));
 
@@ -165,7 +165,7 @@ class CustomerIdEndpointTest {
     @Test
     void testGetBookingsByCustomerId_InternalServerError() throws ExecutionException, InterruptedException {
         // Given
-        when(aggregatorService.getBookingsByCustomerId("C12345"))
+        when(aggregatorService.aggregateBookingByCustomerId("C12345"))
                 .thenReturn(Future.failedFuture(new RuntimeException("Unexpected error")));
 
         // When
@@ -194,7 +194,7 @@ class CustomerIdEndpointTest {
         String[] validIds = { "C123", "customer1", "CUST12345", "1234", "abc123" };
 
         for (String customerId : validIds) {
-            when(aggregatorService.getBookingsByCustomerId(customerId))
+            when(aggregatorService.aggregateBookingByCustomerId(customerId))
                     .thenReturn(Future.succeededFuture(List.of()));
 
             // When
@@ -205,7 +205,7 @@ class CustomerIdEndpointTest {
             assertEquals(HttpStatus.OK, response.getStatusCode());
         }
 
-        verify(aggregatorService, times(validIds.length)).getBookingsByCustomerId(anyString());
+        verify(aggregatorService, times(validIds.length)).aggregateBookingByCustomerId(anyString());
     }
 
     /**
@@ -220,7 +220,7 @@ class CustomerIdEndpointTest {
         singleBooking.setPnr("ABC123");
         singleBooking.setStatus("SUCCESS");
 
-        when(aggregatorService.getBookingsByCustomerId("C12345"))
+        when(aggregatorService.aggregateBookingByCustomerId("C12345"))
                 .thenReturn(Future.succeededFuture(List.of(singleBooking)));
 
         // When
@@ -256,7 +256,7 @@ class CustomerIdEndpointTest {
             manyBookings.add(booking);
         }
 
-        when(aggregatorService.getBookingsByCustomerId("C12345"))
+        when(aggregatorService.aggregateBookingByCustomerId("C12345"))
                 .thenReturn(Future.succeededFuture(manyBookings));
 
         // When
@@ -283,7 +283,7 @@ class CustomerIdEndpointTest {
     @Test
     void testGetBookingsByCustomerId_ResponseStructure() throws ExecutionException, InterruptedException {
         // Given
-        when(aggregatorService.getBookingsByCustomerId("C12345"))
+        when(aggregatorService.aggregateBookingByCustomerId("C12345"))
                 .thenReturn(Future.succeededFuture(mockBookings));
 
         // When
@@ -318,7 +318,7 @@ class CustomerIdEndpointTest {
         degradedBooking.setStatus("DEGRADED");
         degradedBooking.setFromCache(true);
 
-        when(aggregatorService.getBookingsByCustomerId("C12345"))
+        when(aggregatorService.aggregateBookingByCustomerId("C12345"))
                 .thenReturn(Future.succeededFuture(List.of(degradedBooking)));
 
         // When
