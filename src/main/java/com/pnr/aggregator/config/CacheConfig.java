@@ -37,6 +37,14 @@ import java.time.Duration;
 @Configuration
 public class CacheConfig {
 
+        /**
+         * -@Value: Injects property value from application.yml or system environment.
+         * --Reads spring.cache.redis.time-to-live property
+         * --Default value: 600000 milliseconds (10 minutes) if property not found
+         * --Syntax: @Value("${property.name:defaultValue}")
+         * --WithoutIT: cacheTtlMinutes would be 0;
+         * ---cache entries would expire immediately or never expire (implementation dependent).
+         */
         @Value("${spring.cache.redis.time-to-live:600000}")
         private long cacheTtlMinutes;
 

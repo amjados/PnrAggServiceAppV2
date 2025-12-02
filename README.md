@@ -152,11 +152,6 @@ Client → Controller → Aggregator Service
 
 ## Quick Start
 
-### Prerequisites
-- Java 21+
-- Docker & Docker Compose
-- Maven 3.9+
-
 ### Run the Application
 
 1. **Start infrastructure**
@@ -167,12 +162,18 @@ Client → Controller → Aggregator Service
 2. **Build and run**
    ```bash
    mvn clean install
+   or
+   mvn clean package -DskipTests
+
    mvn spring-boot:run
    ```
 
 3. **Test the endpoint**
    ```bash
    curl http://localhost:8080/booking/GHTW42
+   or
+   http://localhost:8080/booking/customer/1099
+
    ```
 
 ## API Response Examples
@@ -300,27 +301,31 @@ src/main/java/com/pnr/aggregator/
 ├── config/
 │   ├── VertxConfig.java
 │   ├── CacheConfig.java
-│   └── CircuitBreakerLogger.java
+│   ├── MongoDbProperties.java
+│   ├── WebConfig.java
+│   └── WebSocketConfig.java
 ├── exception/
 │   ├── PNRNotFoundException.java
 │   └── ServiceUnavailableException.java
+├── util/
+│   ├── CircuitBreakerLogger.java
+│   ├── DataTypeConverter.java
+│   └── EventBusLogger.java
+├── websocket/
+│   └── PNRWebSocketHandler.java
 └── model/
     ├── dto/
+    │   ├── BookingResponse.java
+    │   ├── FlightDTO.java
+    │   └── PassengerDTO.java
     └── entity/
+        ├── Trip.java
+        ├── Flight.java
+        ├── Passenger.java
+        ├── Baggage.java
+        ├── BaggageAllowance.java
+        └── Ticket.java
 ```
-
-## Technology Stack
-
-- **Java 21** - Programming language
-- **Spring Boot 3.2** - Application framework
-- **Vert.x 4.5** - Reactive toolkit
-- **Resilience4j 2.1** - Circuit breaker
-- **MongoDB 7.0** - Database
-- **Redis 7** - Cache
-- **Maven 3.9** - Build tool
-- **Docker** - Containerization
-
----
 
 ## Future Improvements (TODO)
 

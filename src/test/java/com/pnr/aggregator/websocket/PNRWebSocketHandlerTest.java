@@ -28,6 +28,17 @@ import static org.mockito.Mockito.*;
  * RequirementCategorized: Bonus Requirements (WebSocket Broadcasting -
  * Real-time PNR fetched events)
  */
+/**
+ * -@ExtendWith(MockitoExtension.class): Integrates Mockito with JUnit 5.
+ * --Enables Mockito annotations like @Mock, @InjectMocks for test mocking
+ * --Initializes mocks before each test automatically
+ * --WithoutIT: @Mock and @InjectMocks wouldn't work, mocks would be null
+ * =========
+ * -@MockitoSettings(strictness = Strictness.LENIENT): Configures Mockito strictness level.
+ * --LENIENT mode allows unused stubs without throwing exceptions
+ * --Useful when some mocks are set up for multiple tests but not used in all
+ * --WithoutIT: Would use STRICT_STUBS by default; unused stubs cause test failures
+ */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class PNRWebSocketHandlerTest {
