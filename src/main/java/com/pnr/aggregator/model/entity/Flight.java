@@ -21,18 +21,23 @@ public class Flight {
 
     /**
      * Parsed departure date-time for internal processing and filtering
-     * -@JsonIgnore: Excluded from JSON serialization (API response uses departureTimeStamp string)
-     * --WHY: Used for comparing flight times, filtering upcoming flights, sorting by departure
-     * --Populated asynchronously from departureTimeStamp by DataTypeConverter in TripService
+     * -@JsonIgnore: Excluded from JSON serialization (API response uses
+     * departureTimeStamp string)
+     * --WHY: Used for comparing flight times, filtering upcoming flights, sorting
+     * by departure
+     * --Populated asynchronously from departureTimeStamp by DataTypeConverter in
+     * TripService
      */
     @JsonIgnore
     private LocalDateTime departureDateTime;
-    
+
     /**
      * Parsed arrival date-time for internal processing
-     * -@JsonIgnore: Excluded from JSON serialization (API response uses arrivalTimeStamp string)
+     * -@JsonIgnore: Excluded from JSON serialization (API response uses
+     * arrivalTimeStamp string)
      * --WHY: Used for flight duration calculations and time-based logic
-     * --Populated asynchronously from arrivalTimeStamp by DataTypeConverter in TripService
+     * --Populated asynchronously from arrivalTimeStamp by DataTypeConverter in
+     * TripService
      */
     @JsonIgnore
     private LocalDateTime arrivalDateTime;

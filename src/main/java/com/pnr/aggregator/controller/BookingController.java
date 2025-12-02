@@ -205,16 +205,17 @@ public class BookingController {
                         // -------------------------------------------------------------
                         // STATISTICS AGGREGATION: Group bookings for analytics
                         // -------------------------------------------------------------
-                        
+
                         // Group 1: Count total passengers per PNR
                         // Example: {"ABC123" -> 3, "XYZ789" -> 2} means ABC123 has 3 passengers
                         Map<String, Long> groupingByPnrResult = bookings.stream()
                                 .collect(Collectors.groupingBy(
                                         BookingResponse::getPnr,
                                         Collectors.summingLong(booking -> booking.getPassengers().size())));
-                        
+
                         // Group 2: Count number of bookings per customer
-                        // Flattens all passengers from all bookings, removes duplicates within each booking,
+                        // Flattens all passengers from all bookings, removes duplicates within each
+                        // booking,
                         // then counts how many bookings each customer appears in
                         // Example: {"1021" -> 2, "1022" -> 1} means customer 1021 has 2 bookings
                         Map<String, Long> groupingByCustomerIdResult = bookings.stream()
