@@ -716,3 +716,27 @@ Customer "1099" appears in:
 - [ ] Document performance benchmarks
 
 ---
+
+## Test Statistics
+
+| Metric | Count |
+|--------|-------|
+| Total Test Files | 8 |
+| Total Test Methods | 87 |
+| Unit Tests | 70 |
+| Component Tests | 17 |
+| Integration Tests | 0 (documented as TODO) |
+| E2E Tests | 0 (documented as TODO) |
+
+**Test Coverage Summary:**
+- ✅ **Unit Tests**: Complete coverage across all layers (controller, service, exception)
+- ✅ **Component Tests**: Service orchestration testing (BookingAggregatorService)
+- ❌ **Integration Tests**: Not yet implemented (see TODO-TEST section above)
+- ❌ **E2E Tests**: Not yet implemented (see TODO-TEST section above)
+
+**Test Distribution:**
+- Controller Tests: 21 methods (BookingController: 11, CustomerIdEndpoint: 10)
+- Service Tests: 57 methods (Aggregator: 17, Trip: 14, Baggage: 8, Ticket: 9, WebSocket: 9)
+- Exception Tests: 9 methods
+
+---
