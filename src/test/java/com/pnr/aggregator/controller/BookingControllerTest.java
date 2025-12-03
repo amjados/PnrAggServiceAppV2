@@ -131,14 +131,22 @@ class BookingControllerTest {
         validResponse.setPassengers(List.of(passenger));
         validResponse.setFlights(List.of(flight));
 
+        // Mock returns Vert.x Future.succeededFuture - simulates successful async
+        // operation
         when(aggregatorService.aggregateBooking("ABC123"))
                 .thenReturn(Future.succeededFuture(validResponse));
 
         // When
+        // Controller returns CompletableFuture<ResponseEntity<?>> - Java's standard
+        // async type
         CompletableFuture<ResponseEntity<?>> future = bookingController.getBooking("ABC123");
 
         // Then
         assertNotNull(future);
+        // future.get() - BLOCKS current thread until CompletableFuture completes, then
+        // returns result
+        // Throws ExecutionException if future completed exceptionally,
+        // InterruptedException if thread interrupted
         ResponseEntity<?> response = future.get();
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -180,13 +188,20 @@ class BookingControllerTest {
     @Test
     void testGetBooking_NotFound() throws ExecutionException, InterruptedException {
         // Given
+        // Future.failedFuture - Creates Vert.x Future already completed with exception
+        // (not successful)
         when(aggregatorService.aggregateBooking("NOTFND"))
                 .thenReturn(Future.failedFuture(new PNRNotFoundException("PNR not found: NOTFND")));
 
         // When
+        // CompletableFuture handles the failed Future and converts exception to error
+        // response
         CompletableFuture<ResponseEntity<?>> future = bookingController.getBooking("NOTFND");
 
         // Then
+        // future.get() completes successfully (no ExecutionException) because
+        // controller catches exception
+        // and converts it to ResponseEntity with error body
         ResponseEntity<?> response = future.get();
 
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
@@ -209,14 +224,18 @@ class BookingControllerTest {
     @Test
     void testGetBooking_ServiceUnavailable() throws ExecutionException, InterruptedException {
         // Given
+        // Future.failedFuture with ServiceUnavailableException - simulates circuit
+        // breaker open state
         when(aggregatorService.aggregateBooking("ABC123"))
                 .thenReturn(Future.failedFuture(
                         new ServiceUnavailableException("Trip service temporarily unavailable")));
 
         // When
+        // CompletableFuture allows async processing of service unavailable scenario
         CompletableFuture<ResponseEntity<?>> future = bookingController.getBooking("ABC123");
 
         // Then
+        // future.get() retrieves the 503 error response wrapped in ResponseEntity
         ResponseEntity<?> response = future.get();
 
         assertEquals(HttpStatus.SERVICE_UNAVAILABLE, response.getStatusCode());
@@ -240,13 +259,18 @@ class BookingControllerTest {
     @Test
     void testGetBooking_InternalServerError() throws ExecutionException, InterruptedException {
         // Given
+        // Future.failedFuture with generic RuntimeException - simulates unexpected
+        // error
         when(aggregatorService.aggregateBooking("ABC123"))
                 .thenReturn(Future.failedFuture(new RuntimeException("Unexpected error")));
 
         // When
+        // CompletableFuture wraps async error handling logic
         CompletableFuture<ResponseEntity<?>> future = bookingController.getBooking("ABC123");
 
         // Then
+        // future.get() blocks and returns 500 error response after controller catches
+        // RuntimeException
         ResponseEntity<?> response = future.get();
 
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
@@ -326,15 +350,20 @@ class BookingControllerTest {
     @Test
     void testGetBooking_MultipleSimultaneousRequests() throws ExecutionException, InterruptedException {
         // Given
+        // Mock returns successful Future for any PNR input
         when(aggregatorService.aggregateBooking(anyString()))
                 .thenReturn(Future.succeededFuture(validResponse));
 
         // When - Multiple simultaneous requests
+        // Three CompletableFutures created concurrently - simulates parallel async
+        // requests
         CompletableFuture<ResponseEntity<?>> future1 = bookingController.getBooking("ABC123");
         CompletableFuture<ResponseEntity<?>> future2 = bookingController.getBooking("XYZ789");
         CompletableFuture<ResponseEntity<?>> future3 = bookingController.getBooking("DEF456");
 
         // Then - All should complete successfully
+        // Each future.get() blocks until that specific CompletableFuture completes
+        // Tests thread-safety and concurrent request handling
         ResponseEntity<?> response1 = future1.get();
         ResponseEntity<?> response2 = future2.get();
         ResponseEntity<?> response3 = future3.get();
@@ -361,13 +390,18 @@ class BookingControllerTest {
         degradedResponse.setStatus("DEGRADED");
         degradedResponse.setFromCache(true);
 
+        // Future.succeededFuture with DEGRADED status - simulates fallback/cache
+        // response
         when(aggregatorService.aggregateBooking("ABC123"))
                 .thenReturn(Future.succeededFuture(degradedResponse));
 
         // When
+        // CompletableFuture processes degraded mode response asynchronously
         CompletableFuture<ResponseEntity<?>> future = bookingController.getBooking("ABC123");
 
         // Then
+        // future.get() blocks and retrieves the degraded response (still HTTP 200 but
+        // with degraded flag)
         ResponseEntity<?> response = future.get();
         assertEquals(HttpStatus.OK, response.getStatusCode());
 
@@ -387,13 +421,16 @@ class BookingControllerTest {
     @Test
     void testGetBooking_ErrorResponseStructure() throws ExecutionException, InterruptedException {
         // Given
+        // Future.failedFuture simulates PNR not found error
         when(aggregatorService.aggregateBooking("ABC123"))
                 .thenReturn(Future.failedFuture(new PNRNotFoundException("Not found")));
 
         // When
+        // CompletableFuture wraps error handling for structural validation
         CompletableFuture<ResponseEntity<?>> future = bookingController.getBooking("ABC123");
 
         // Then
+        // future.get() blocks and returns error response with structured error body
         ResponseEntity<?> response = future.get();
 
         @SuppressWarnings("unchecked")
@@ -473,13 +510,17 @@ class BookingControllerTest {
         flights.add(flight);
         completeResponse.setFlights(flights);
 
+        // Future.succeededFuture with complete DVT-compliant response structure
         when(aggregatorService.aggregateBooking("GHTW42"))
                 .thenReturn(Future.succeededFuture(completeResponse));
 
         // When
+        // CompletableFuture handles async processing of complete booking response
         CompletableFuture<ResponseEntity<?>> future = bookingController.getBooking("GHTW42");
 
         // Then
+        // future.get() blocks until async operation completes and returns full response
+        // for validation
         ResponseEntity<?> response = future.get();
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertInstanceOf(BookingResponse.class, response.getBody());
@@ -587,13 +628,18 @@ class BookingControllerTest {
         flights.add(flight);
         mixedResponse.setFlights(flights);
 
+        // Future.succeededFuture with mixed ticket scenario (one passenger without
+        // ticket)
         when(aggregatorService.aggregateBooking("GHTW42"))
                 .thenReturn(Future.succeededFuture(mixedResponse));
 
         // When
+        // CompletableFuture processes booking with partial ticket data asynchronously
         CompletableFuture<ResponseEntity<?>> future = bookingController.getBooking("GHTW42");
 
         // Then
+        // future.get() blocks and returns response where some passengers lack tickets
+        // (DVT requirement)
         ResponseEntity<?> response = future.get();
         assertEquals(HttpStatus.OK, response.getStatusCode());
 
