@@ -23,6 +23,8 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
+ * TestCategory: Unit Test
+ * 
  * Unit tests for PNRWebSocketHandler
  * Coverage: WebSocket lifecycle, event broadcasting, error handling
  * RequirementCategorized: Bonus Requirements (WebSocket Broadcasting -
@@ -34,10 +36,12 @@ import static org.mockito.Mockito.*;
  * --Initializes mocks before each test automatically
  * --WithoutIT: @Mock and @InjectMocks wouldn't work, mocks would be null
  * =========
- * -@MockitoSettings(strictness = Strictness.LENIENT): Configures Mockito strictness level.
+ * -@MockitoSettings(strictness = Strictness.LENIENT): Configures Mockito
+ * strictness level.
  * --LENIENT mode allows unused stubs without throwing exceptions
  * --Useful when some mocks are set up for multiple tests but not used in all
- * --WithoutIT: Would use STRICT_STUBS by default; unused stubs cause test failures
+ * --WithoutIT: Would use STRICT_STUBS by default; unused stubs cause test
+ * failures
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)

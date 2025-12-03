@@ -34,6 +34,8 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
+ * TestCategory: Unit Test
+ * 
  * Comprehensive unit tests for TripService
  * Coverage: Circuit breaker patterns, MongoDB operations, caching, error
  * handling

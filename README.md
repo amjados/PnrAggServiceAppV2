@@ -456,3 +456,263 @@ private Future<Void> cacheTrip(String pnr, Trip trip) {
 - True async everywhere
 
 ---
+
+## TODO-TEST: Missing Test Types
+
+### Current Test Coverage
+- ✅ **Unit Tests**: 70 tests across service, controller, exception layers
+- ✅ **Component Tests**: 17 tests for service orchestration (BookingAggregatorService)
+- **Total**: 87 test methods
+
+### Missing Test Types (To Be Implemented)
+
+#### 1. Integration Tests (High Priority)
+**Purpose**: Test with real MongoDB using `init-mongo.js` seed data
+
+**Test Data Available in `init-mongo.js`:**
+- PNRs: `GHTW42`, `ABC123`, `XYZ789`, `DEF456`, `PQR999`, `GHR001`, `GHR002`
+- Customer IDs for multi-booking tests: `1099` (appears in GHR001 and GHR002)
+- Special cases: GHTW42 passenger 1 has NO ticket (tests missing data scenarios)
+
+**Example Tests Needed:**
+```java
+@SpringBootTest
+@DirtiesContext
+class TripServiceIntegrationTest {
+    @Autowired
+    private TripService tripService;
+    
+    @Test
+    void testGetTrip_WithRealMongoDB() {
+        // Uses actual GHTW42 from init-mongo.js
+        Trip trip = tripService.getTripInfo("GHTW42").result();
+        assertEquals("1216", trip.getPassengers().get(1).getCustomerId());
+    }
+    
+    @Test
+    void testCustomerId1099_HasMultipleBookings() {
+        // Customer 1099 has bookings in GHR001 and GHR002
+        List<Trip> trips = tripService.getTripsByCustomerId("1099").result();
+        assertEquals(2, trips.size());
+    }
+}
+```
+
+**Files to Create:**
+- `TripServiceIntegrationTest.java`
+- `BaggageServiceIntegrationTest.java`
+- `TicketServiceIntegrationTest.java`
+- `BookingAggregatorIntegrationTest.java`
+
+#### 2. End-to-End (E2E) Tests (High Priority)
+**Purpose**: Test complete REST API flow with real HTTP requests
+
+**Example:**
+```java
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+class BookingE2ETest {
+    @Autowired
+    private TestRestTemplate restTemplate;
+    
+    @Test
+    void testGetBooking_CompleteFlow() {
+        ResponseEntity<BookingResponse> response = 
+            restTemplate.getForEntity("/booking/ABC123", BookingResponse.class);
+        
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals("ABC123", response.getBody().getPnr());
+        assertEquals("BUSINESS", response.getBody().getCabinClass());
+    }
+    
+    @Test
+    void testGetByCustomerId_1099_ReturnsMultipleBookings() {
+        // Customer 1099 in seed data has 2 bookings
+        ResponseEntity<BookingResponse[]> response = 
+            restTemplate.getForEntity("/booking/customer/1099", BookingResponse[].class);
+        
+        assertEquals(2, response.getBody().length);
+    }
+}
+```
+
+**Files to Create:**
+- `BookingE2ETest.java`
+- `CustomerIdEndpointE2ETest.java`
+
+#### 3. Repository/Database Tests (Medium Priority)
+**Purpose**: Test MongoDB queries, indexes, and aggregations
+
+**Example:**
+```java
+@DataMongoTest
+class TripRepositoryTest {
+    @Autowired
+    private MongoTemplate mongoTemplate;
+    
+    @Test
+    void testFindByBookingReference() {
+        Trip trip = mongoTemplate.findById("ABC123", Trip.class, "trips");
+        assertNotNull(trip);
+        assertEquals("BUSINESS", trip.getCabinClass());
+    }
+    
+    @Test
+    void testFindByCustomerId_MultipleBookings() {
+        // Find all trips for customer 1099
+        Query query = new Query(Criteria.where("passengers.customerId").is("1099"));
+        List<Trip> trips = mongoTemplate.find(query, Trip.class, "trips");
+        assertEquals(2, trips.size());
+    }
+}
+```
+
+**Files to Create:**
+- `TripRepositoryTest.java`
+- `BaggageRepositoryTest.java`
+- `TicketRepositoryTest.java`
+
+#### 4. WebSocket Integration Tests (Medium Priority)
+**Purpose**: Test real-time WebSocket connections and message flow
+
+**Example:**
+```java
+@SpringBootTest(webEnvironment = RANDOM_PORT)
+class WebSocketIntegrationTest {
+    @Test
+    void testWebSocketConnection_ReceivesBookingUpdates() {
+        WebSocketStompClient stompClient = new WebSocketStompClient(
+            new SockJsClient(createTransportClient())
+        );
+        
+        StompSession session = stompClient.connect(wsUrl, handler).get(1, SECONDS);
+        session.subscribe("/topic/bookings", new BookingFrameHandler());
+        
+        // Trigger booking fetch
+        // Verify WebSocket message received
+    }
+}
+```
+
+**Files to Create:**
+- `WebSocketIntegrationTest.java`
+- `PNRWebSocketHandlerIntegrationTest.java`
+
+#### 5. Circuit Breaker Integration Tests (Medium Priority)
+**Purpose**: Test circuit breaker behavior under actual failure conditions
+
+**Example:**
+```java
+@SpringBootTest
+class CircuitBreakerIntegrationTest {
+    @Autowired
+    private TripService tripService;
+    
+    @Autowired
+    private CircuitBreakerRegistry registry;
+    
+    @Test
+    void testCircuitBreaker_OpensAfterFailures() {
+        CircuitBreaker cb = registry.circuitBreaker("tripServiceCB");
+        
+        // Simulate failures to open circuit
+        for (int i = 0; i < 10; i++) {
+            // Cause service failures
+        }
+        
+        assertEquals(CircuitBreaker.State.OPEN, cb.getState());
+    }
+}
+```
+
+**Files to Create:**
+- `CircuitBreakerIntegrationTest.java`
+
+#### 6. Performance/Load Tests (Low Priority)
+**Purpose**: Verify system behavior under concurrent load
+
+**Example:**
+```java
+class BookingPerformanceTest {
+    @Test
+    void testConcurrent100Requests_CompletesIn5Seconds() {
+        ExecutorService executor = Executors.newFixedThreadPool(100);
+        long startTime = System.currentTimeMillis();
+        
+        // Submit 100 concurrent booking requests
+        List<CompletableFuture<ResponseEntity<?>>> futures = ...;
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+        
+        long duration = System.currentTimeMillis() - startTime;
+        assertTrue(duration < 5000, "All requests should complete within 5 seconds");
+    }
+}
+```
+
+**Files to Create:**
+- `BookingPerformanceTest.java`
+
+#### 7. Contract Tests (Low Priority)
+**Purpose**: Verify API contract compatibility and schema validation
+
+**Tools**: Spring Cloud Contract or Pact
+**Files to Create:**
+- `BookingApiContractTest.java`
+- Contract definition files
+
+#### 8. Mutation Tests (Low Priority)
+**Purpose**: Verify test quality by injecting code mutations
+
+**Tool**: PIT (Pitest)
+**Configuration**: Add pitest-maven plugin to `pom.xml`
+
+---
+
+### Test Data Alignment Notes
+
+**Seed Data from `init-mongo.js`:**
+```javascript
+// PNR with passenger missing ticket (test edge case)
+GHTW42: passenger 1 (customerId: null), passenger 2 (customerId: "1216")
+        - Only passenger 2 has ticket
+
+// Standard business booking
+ABC123: passenger 1 (customerId: "5678"), BUSINESS class
+
+// First class with 2 passengers
+XYZ789: passengers (customerIds: "9012", "9013"), FIRST class
+
+// Economy with 3 passengers
+DEF456: passengers (customerIds: null, "3456", "3457")
+        - Passenger 1 has no ticket
+
+// Premium economy with 2 flights
+PQR999: passenger (customerId: "7890"), PREMIUM_ECONOMY
+
+// Multi-booking customer (IMPORTANT FOR TESTS)
+Customer "1099" appears in:
+  - GHR001: passenger 1
+  - GHR002: passenger 1
+(Use this for testing customer ID endpoint)
+```
+
+**Integration Test Priority:**
+1. Test PNR `GHTW42` - validates missing ticket handling
+2. Test Customer ID `1099` - validates multiple bookings
+3. Test PNR `ABC123` - standard happy path
+4. Test PNR `DEF456` - multiple passengers with mixed data
+
+---
+
+### Implementation Checklist
+
+- [ ] Create integration test base class with MongoDB test container
+- [ ] Implement TripServiceIntegrationTest with GHTW42, ABC123 test cases
+- [ ] Implement BookingAggregatorIntegrationTest with customer 1099 multi-booking test
+- [ ] Implement BookingE2ETest with REST API validation
+- [ ] Implement WebSocketIntegrationTest with real connection
+- [ ] Implement CircuitBreakerIntegrationTest with failure scenarios
+- [ ] Add Repository tests for custom MongoDB queries
+- [ ] Configure Pitest for mutation testing
+- [ ] Document performance benchmarks
+
+---

@@ -28,6 +28,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 /**
+ * TestCategory: Unit Test
+ * 
  * Comprehensive unit tests for BookingController
  * Coverage: Input validation, error handling, async response handling
  * RequirementCategorized: Core Requirements (REST API Endpoint - GET /booking/{pnr})

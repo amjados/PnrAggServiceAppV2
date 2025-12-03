@@ -25,11 +25,20 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Comprehensive unit tests for BookingAggregatorService
+ * TestCategory: Component Test
+ * 
+ * Comprehensive component tests for BookingAggregatorService
+ * Tests service orchestration and integration across TripService,
+ * BaggageService, and TicketService
  * Coverage: Reactive patterns, parallel composition, fallback message
  * aggregation
  * RequirementCategorized: Core Requirements (Reactive Programming & Data
  * Aggregation)
+ * 
+ * Note: This is a Component Test (not Unit Test) because it tests the
+ * coordination
+ * and data flow between multiple service components, even though dependencies
+ * are mocked.
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)

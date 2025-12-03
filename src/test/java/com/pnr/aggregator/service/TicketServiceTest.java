@@ -23,6 +23,8 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
+ * TestCategory: Unit Test
+ * 
  * Comprehensive unit tests for TicketService
  * Coverage: Circuit breaker, missing tickets, MongoDB operations
  * RequirementCategorized: Core Requirements (MongoDB Source 3 - ETicket

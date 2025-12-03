@@ -24,6 +24,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 /**
+ * TestCategory: Unit Test
+ * 
  * Unit tests for Customer ID endpoint
  * Coverage: Search by customer ID, multiple bookings, error handling
  * RequirementCategorized: Bonus Requirements (Customer ID Endpoint - Hide data

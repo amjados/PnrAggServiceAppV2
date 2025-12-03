@@ -25,6 +25,8 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
+ * TestCategory: Unit Test
+ * 
  * Comprehensive unit tests for BaggageService
  * Coverage: Circuit breaker, fallback with defaults, MongoDB operations
  * RequirementCategorized: Core Requirements (MongoDB Source 2 - Baggage

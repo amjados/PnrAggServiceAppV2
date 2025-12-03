@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
+ * TestCategory: Unit Test
+ * 
  * Unit tests for custom exception classes
  * RequirementCategorized: Core Requirements (Error Handling)
  */
