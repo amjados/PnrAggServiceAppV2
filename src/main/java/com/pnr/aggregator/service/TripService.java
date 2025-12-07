@@ -339,6 +339,139 @@ public class TripService {
     }
 
     /**
+     * Get list of PNRs (booking references) for a specific customer ID
+     * 
+     * PURPOSE:
+     * - Fast O(1) lookup using customer_bookings index collection
+     * - Queries customer_bookings collection which is optimized for customer
+     * lookups
+     * - In sharded environment, targets single shard (customerId is shard key)
+     * 
+     * QUERY STRATEGY:
+     * - Step 1: Query customer_bookings by customerId (targeted to 1 shard)
+     * - Step 2: Extract bookings array from result
+     * - Returns list of booking references (PNRs) for this customer
+     * 
+     * FALLBACK:
+     * - If customer_bookings query fails or collection doesn't exist
+     * - Falls back to querying trips collection directly (slower, scatter-gather)
+     * - Ensures backward compatibility
+     * 
+     * SHARDING BENEFIT:
+     * - With customer_bookings sharded by customerId: Query hits 1 shard (fast)
+     * - Without customer_bookings: Must query all shards in trips collection (slow)
+     * - Performance improvement: 10-100x faster in sharded clusters
+     * 
+     * WHY THIS METHOD:
+     * - Separates PNR lookup from trip data retrieval
+     * - Allows BookingAggregatorService to get PNRs first, then aggregate in
+     * parallel
+     * - Reduces code duplication
+     * - Cleaner separation of concerns
+     * 
+     * WITHOUT THIS:
+     * - Must query trips collection for customer_bookings data (inefficient)
+     * - Scatter-gather across all shards (slow in sharded environment)
+     * - No optimization for customer-based queries
+     * 
+     * @param customerId The customer identifier to search for
+     * @return Future with list of booking references (PNRs) for this customer
+     */
+    public Future<List<String>> getPnrsByCustomerId(String customerId) {
+        Promise<List<String>> promise = Promise.promise();
+
+        log.debug("Looking up PNRs for customer: {}", customerId);
+
+        // Skip null/empty customerIds
+        if (customerId == null || customerId.trim().isEmpty()) {
+            log.warn("Invalid customerId provided: {}", customerId);
+            promise.complete(new ArrayList<>());
+            return promise.future();
+        }
+
+        // =====================================================================
+        // OPTIMIZED PATH: Query customer_bookings index collection
+        // =====================================================================
+        // WHY: In sharded cluster, customer_bookings is sharded by customerId
+        // RESULT: Query targets exactly 1 shard (very fast, O(1) lookup)
+        // =====================================================================
+
+        // Query customer_bookings collection by customerId (document _id or customerId
+        // field)
+        // The customer_bookings documents have structure:
+        // { "customerId": "1216", "bookings": ["GHTW42", "GHR002"] }
+        JsonObject query = new JsonObject().put("customerId", customerId);
+
+        mongoClient.findOne("customer_bookings", query, null, ar -> {
+            if (ar.succeeded() && ar.result() != null) {
+                // Successfully found customer_bookings document
+                JsonObject result = ar.result();
+                JsonArray bookingRefs = result.getJsonArray("bookings");
+
+                if (bookingRefs != null && !bookingRefs.isEmpty()) {
+                    // Convert JsonArray to List<String>
+                    List<String> pnrList = bookingRefs.stream()
+                            .map(Object::toString)
+                            .collect(Collectors.toList());
+
+                    log.debug("Found {} PNR(s) for customer {} from customer_bookings index",
+                            pnrList.size(), customerId);
+                    promise.complete(pnrList);
+                } else {
+                    // Customer exists but has no bookings
+                    log.debug("Customer {} found but has no bookings", customerId);
+                    promise.complete(new ArrayList<>());
+                }
+            } else {
+                // =====================================================================
+                // FALLBACK PATH: customer_bookings query failed or customer not found
+                // =====================================================================
+                // WHY FALLBACK:
+                // - customer_bookings collection may not exist yet
+                // - customer may not be in index (out of sync)
+                // - Ensures backward compatibility
+                // IMPACT: Falls back to querying trips directly (slower but reliable)
+                // =====================================================================
+
+                if (ar.failed()) {
+                    log.warn("Failed to query customer_bookings for customer {}, falling back to trips query: {}",
+                            customerId, ar.cause().getMessage());
+                } else {
+                    log.debug("Customer {} not found in customer_bookings index, falling back to trips query",
+                            customerId);
+                }
+
+                // Fallback: Query trips collection directly
+                // This is slower in sharded environment (scatter-gather to all shards)
+                // But ensures we don't miss any bookings if index is out of sync
+                JsonObject tripQuery = new JsonObject().put("passengers.customerId", customerId);
+
+                mongoClient.find("trips", tripQuery, tripAr -> {
+                    if (tripAr.succeeded()) {
+                        List<JsonObject> trips = tripAr.result();
+
+                        // Extract unique booking references from trips
+                        List<String> pnrList = trips.stream()
+                                .map(trip -> trip.getString("bookingReference"))
+                                .distinct()
+                                .collect(Collectors.toList());
+
+                        log.debug("Found {} PNR(s) for customer {} from trips collection (fallback)",
+                                pnrList.size(), customerId);
+                        promise.complete(pnrList);
+                    } else {
+                        log.error("Failed to query trips for customer {}: {}",
+                                customerId, tripAr.cause().getMessage());
+                        promise.fail(tripAr.cause());
+                    }
+                });
+            }
+        });
+
+        return promise.future();
+    }
+
+    /**
      * Get all trips for a specific customer ID with circuit breaker protection
      * 
      * Searches MongoDB for trips where any passenger has the given customerId

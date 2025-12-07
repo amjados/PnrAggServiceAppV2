@@ -40,6 +40,7 @@ md-files/
 docs/
 
 # Test/Error data (not for production)
+init-mongo-test-errordata.js
 mongo-init/init-mongo-test-errordata.js
 
 # Docker files (no need to include in container)

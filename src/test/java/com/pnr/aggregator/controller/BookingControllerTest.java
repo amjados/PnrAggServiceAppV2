@@ -4,8 +4,11 @@ import com.pnr.aggregator.exception.PNRNotFoundException;
 import com.pnr.aggregator.exception.ServiceUnavailableException;
 import com.pnr.aggregator.model.dto.BookingResponse;
 import com.pnr.aggregator.model.dto.PassengerDTO;
+import com.pnr.aggregator.model.entity.Trip;
 import com.pnr.aggregator.model.dto.FlightDTO;
 import com.pnr.aggregator.service.BookingAggregatorService;
+import com.pnr.aggregator.service.TripService;
+
 import io.vertx.core.Future;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -207,6 +210,11 @@ class BookingControllerTest {
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
         assertInstanceOf(Map.class, response.getBody());
 
+        // @SuppressWarnings("unchecked") - Suppresses compiler warning for unchecked
+        // cast
+        // response.getBody() returns Object, casting to Map<String, Object> can't be
+        // verified at runtime
+        // due to type erasure (generics removed during compilation)
         @SuppressWarnings("unchecked")
         Map<String, Object> errorBody = (Map<String, Object>) response.getBody();
         assertEquals("Not Found", errorBody.get("error"));
@@ -241,6 +249,8 @@ class BookingControllerTest {
         assertEquals(HttpStatus.SERVICE_UNAVAILABLE, response.getStatusCode());
         assertInstanceOf(Map.class, response.getBody());
 
+        // @SuppressWarnings("unchecked") - Suppresses unchecked cast warning
+        // Safe cast here because we verified response.getBody() is a Map instance above
         @SuppressWarnings("unchecked")
         Map<String, Object> errorBody = (Map<String, Object>) response.getBody();
         assertEquals("Service Unavailable", errorBody.get("error"));
@@ -303,6 +313,8 @@ class BookingControllerTest {
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertInstanceOf(Map.class, response.getBody());
 
+        // @SuppressWarnings("unchecked") - Necessary for casting to parameterized type
+        // Generic type information <String, Object> is erased at runtime (type erasure)
         @SuppressWarnings("unchecked")
         Map<String, Object> errorBody = (Map<String, Object>) response.getBody();
         assertEquals("Bad Request", errorBody.get("error"));
@@ -390,6 +402,10 @@ class BookingControllerTest {
         degradedResponse.setStatus("DEGRADED");
         degradedResponse.setFromCache(true);
 
+        Trip validTrip = new Trip();
+        validTrip.setBookingReference("ABC123");
+        validTrip.setCabinClass("ECONOMY");
+
         // Future.succeededFuture with DEGRADED status - simulates fallback/cache
         // response
         when(aggregatorService.aggregateBooking("ABC123"))
@@ -433,6 +449,9 @@ class BookingControllerTest {
         // future.get() blocks and returns error response with structured error body
         ResponseEntity<?> response = future.get();
 
+        // @SuppressWarnings("unchecked") - Unchecked cast from Object to Map<String,
+        // Object>
+        // Compiler warning because generic type safety can't be verified at runtime
         @SuppressWarnings("unchecked")
         Map<String, Object> errorBody = (Map<String, Object>) response.getBody();
 
@@ -563,6 +582,13 @@ class BookingControllerTest {
         assertEquals("IAD", f1.getArrivalAirport());
         assertEquals("2025-11-11T08:10:00+00:00", f1.getArrivalTimeStamp());
 
+        // Mockito verification: Confirms aggregatorService.aggregateBooking() was
+        // called exactly once
+        // with PNR "GHTW42" during test execution. This ensures:
+        // 1. Controller properly delegates to service layer
+        // 2. Correct PNR parameter is passed (not modified/corrupted)
+        // 3. No extra unexpected calls were made
+        // Test fails if method not called or called with wrong arguments
         verify(aggregatorService).aggregateBooking("GHTW42");
     }
 

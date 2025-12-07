@@ -32,18 +32,59 @@ import static org.mockito.Mockito.*;
  * RequirementCategorized: Core Requirements (MongoDB Source 2 - Baggage
  * Allowance) & Bonus Requirements (Circuit Breaking)
  */
+/**
+ * -[@ExtendWith](MockitoExtension.class): Integrates Mockito with JUnit 5.
+ * --Enables Mockito annotations like [@Mock], [@InjectMocks], etc.
+ * --Initializes mocks before each test method automatically
+ * --Validates mock usage after each test (detects unused stubs)
+ * --Replaces the legacy [@RunWith](MockitoJUnitRunner.class) from JUnit 4
+ * --WithoutIT: [@Mock] and [@InjectMocks] annotations wouldn't work;
+ * ---mocks would be null, causing NullPointerException in tests.
+ */
 @ExtendWith(MockitoExtension.class)
 class BaggageServiceTest {
 
+    /**
+     * -[@Mock]: Creates a mock instance of MongoClient.
+     * --Simulates MongoDB operations for baggage collection
+     * --Enables testing baggage allowance retrieval without database
+     * --Allows testing fallback to default values (25kg/7kg)
+     * --Used to test async MongoDB findOne operations
+     * --WithoutIT: Would require MongoDB instance and baggage test data
+     */
     @Mock
     private MongoClient mongoClient;
 
+    /**
+     * -[@Mock]: Creates mock for CircuitBreakerRegistry.
+     * --Provides circuit breaker instances by name
+     * --Enables testing resilience patterns
+     * --Allows testing different circuit breaker states
+     * --WithoutIT: Can't test circuit breaker integration
+     */
     @Mock
     private CircuitBreakerRegistry circuitBreakerRegistry;
 
+    /**
+     * -[@Mock]: Creates mock for CircuitBreaker.
+     * --Simulates circuit breaker for baggage service
+     * --Enables testing behavior when circuit opens
+     * --Allows verification of success/error metrics
+     * --Important: Missing baggage returns DEFAULT values (not failure)
+     * --WithoutIT: Can't test resilience and fallback patterns
+     */
     @Mock
     private CircuitBreaker circuitBreaker;
 
+    /**
+     * -[@InjectMocks]: Creates instance and injects [@Mock] dependencies into it.
+     * --Creates a real instance of BaggageService
+     * --Automatically injects [@Mock] objects (mongoClient, circuitBreakerRegistry)
+     * --Simulates Spring's dependency injection for testing
+     * --Uses constructor, setter, or field injection (in that order)
+     * --WithoutIT: Would need manual instantiation like new BaggageService();
+     * ---and manual injection of mocks, making tests harder to write.
+     */
     @InjectMocks
     private BaggageService baggageService;
 
@@ -139,10 +180,15 @@ class BaggageServiceTest {
         }).when(mongoClient).findOne(eq("baggage"), any(JsonObject.class), isNull(), any());
 
         // When
+        // Future<Baggage> - Async operation that returns default baggage when not found
         Future<Baggage> future = baggageService.getBaggageInfo("ABC123");
 
         // Then
+        // future.succeeded() is true even when not found - default baggage is valid
+        // fallback
         assertTrue(future.succeeded());
+        // future.result() returns Baggage with default values (25kg checked, 7kg
+        // carry-on)
         Baggage baggage = future.result();
         assertNotNull(baggage);
         assertTrue(baggage.isFromDefault());

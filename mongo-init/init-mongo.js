@@ -425,6 +425,167 @@ db.tickets.insertMany([
     }
 ]);
 
+// =============================================================================
+// SHARDING CONFIGURATION (For Production/Scaled Environments)
+// =============================================================================
+// Purpose: Enable horizontal scaling by distributing data across multiple shards
+// When to use: When data size exceeds single server capacity (500GB+) or need 
+//              high availability and geographic distribution
+// =============================================================================
+
+// -------------------------------------------------------------------------
+// PHASE 1: Create Indexes (REQUIRED before sharding)
+// -------------------------------------------------------------------------
+// WHY: MongoDB requires an index on the shard key before sharding a collection
+// WITHOUT THIS: sh.shardCollection() will fail with "index not found" error
+// -------------------------------------------------------------------------
+
+print("Creating indexes for sharding...");
+
+// trips collection: Compound index for time-based + PNR queries
+// - bookingReference: Primary query pattern (targeted shard lookup)
+// - departureDate: Secondary for time-based queries and data archival
+// WITHOUT THIS INDEX: Cannot shard trips collection, queries will be slower
+db.trips.createIndex({ bookingReference: 1, departureDate: 1 });
+
+// baggage collection: Simple index on bookingReference
+// - All baggage queries use bookingReference (one-to-one with trip)
+// WITHOUT THIS INDEX: Cannot shard baggage collection
+db.baggage.createIndex({ bookingReference: 1 });
+
+// tickets collection: Simple index on bookingReference
+// - All ticket queries use bookingReference (one-to-many with trip)
+// WITHOUT THIS INDEX: Cannot shard tickets collection
+db.tickets.createIndex({ bookingReference: 1 });
+
+print("Indexes created successfully!");
+
+// -------------------------------------------------------------------------
+// PHASE 2: Shard Collections (Enable distributed data storage)
+// -------------------------------------------------------------------------
+// NOTE: Uncomment these commands when deploying to a sharded cluster
+// NOTE: These will FAIL on standalone MongoDB (current setup)
+// -------------------------------------------------------------------------
+
+/*
+// Enable sharding on database
+// WHY: Must enable sharding at database level before sharding collections
+// WITHOUT THIS: Cannot shard any collections in this database
+sh.enableSharding("pnr_db");
+
+// Shard trips collection with compound key
+// - bookingReference: "hashed" = Even distribution across shards (no hotspots)
+// - departureDate: Range-based = Efficient time-based queries and archival
+// WHY COMPOUND KEY: 
+//   1. Hash on bookingReference prevents hotspots (all shards get equal load)
+//   2. Range on departureDate allows efficient date-based queries
+//   3. Can archive old data by migrating date ranges to cold storage
+// WITHOUT SHARDING: All data on one server, limited by single server capacity
+sh.shardCollection("pnr_db.trips", { 
+    bookingReference: "hashed",
+    departureDate: 1 
+});
+
+// Shard baggage collection (simple hashed key)
+// WHY HASHED: Even distribution, all queries include bookingReference
+// WITHOUT SHARDING: Limited to single server storage/performance
+sh.shardCollection("pnr_db.baggage", { bookingReference: "hashed" });
+
+// Shard tickets collection (simple hashed key)
+// WHY HASHED: Even distribution, all queries include bookingReference
+// WITHOUT SHARDING: Limited to single server storage/performance
+sh.shardCollection("pnr_db.tickets", { bookingReference: "hashed" });
+
+print("Collections sharded successfully!");
+print("Shard distribution:");
+print("- trips: Hashed by bookingReference, ranged by departureDate");
+print("- baggage: Hashed by bookingReference");
+print("- tickets: Hashed by bookingReference");
+*/
+
+// =============================================================================
+// PHASE 3: Customer Bookings Index Collection (For optimized customer queries)
+// =============================================================================
+// Purpose: Enable fast customer->bookings lookup without scatter-gather queries
+// Trade-off: Adds slight overhead on writes, but dramatically speeds up reads
+// Use case: When /customer/{customerId} endpoint has high traffic
+// =============================================================================
+
+print("Creating customer_bookings index collection...");
+
+// Create customer_bookings collection
+// WHY: Provides O(1) lookup from customerId to their bookingReferences
+// WITHOUT THIS: Must query ALL shards to find customer's bookings (slow)
+db.createCollection("customer_bookings");
+
+// Create index on customerId (primary lookup field)
+// WHY: Fast lookup when querying by customerId
+// WITHOUT THIS: Full collection scan on every customer query
+db.customer_bookings.createIndex({ customerId: 1 });
+
+// Populate customer_bookings from existing trips data
+// WHY: Build the index by extracting customer->booking relationships
+// WHAT IT DOES:
+//   1. $unwind: Flattens passengers array (one doc per passenger)
+//   2. $group: Groups by customerId, collects all their bookingReferences
+//   3. $out: Writes results to customer_bookings collection
+// WITHOUT THIS: customer_bookings collection would be empty (no data)
+print("Populating customer_bookings from trips data...");
+db.trips.aggregate([
+    // Step 1: Flatten passengers array
+    // BEFORE: { bookingReference: "GHTW42", passengers: [{customerId: "1216"}, {customerId: null}] }
+    // AFTER:  { bookingReference: "GHTW42", passengers: {customerId: "1216"} }
+    //         { bookingReference: "GHTW42", passengers: {customerId: null} }
+    { $unwind: "$passengers" },
+
+    // Step 2: Group by customerId and collect booking references
+    // RESULT: { _id: "1216", bookings: ["GHTW42", "GHR002"] }
+    //         { _id: "5678", bookings: ["ABC123"] }
+    {
+        $group: {
+            _id: "$passengers.customerId",           // Group by customerId
+            bookings: { $addToSet: "$bookingReference" }  // Collect unique PNRs
+        }
+    },
+
+    // Step 3: Rename _id to customerId for clarity
+    {
+        $project: {
+            customerId: "$_id",
+            bookings: 1,
+            _id: 0
+        }
+    },
+
+    // Step 4: Write results to customer_bookings collection
+    // WITHOUT THIS: Results are only temporary (not persisted)
+    { $out: "customer_bookings" }
+]);
+
+print("customer_bookings collection populated!");
+
+// Show sample data for verification
+print("Sample customer_bookings documents:");
+db.customer_bookings.find({ customerId: { $ne: null } }).limit(3).forEach(printjson);
+
+// -------------------------------------------------------------------------
+// Shard customer_bookings collection (for scaled environments)
+// -------------------------------------------------------------------------
+// NOTE: Uncomment when deploying to sharded cluster
+/*
+// Shard by customerId (hashed for even distribution)
+// WHY HASHED: Customers distributed evenly across shards (no hotspots)
+// QUERY PATTERN: Always query by customerId (targeted to 1 shard)
+// WITHOUT SHARDING: All customer lookups hit single server
+sh.shardCollection("pnr_db.customer_bookings", { customerId: "hashed" });
+
+print("customer_bookings collection sharded successfully!");
+*/
+
+print("=====================================");
 print("MongoDB initialization complete!");
-print("Collections created: trips, baggage, tickets");
+print("Collections created: trips, baggage, tickets, customer_bookings");
 print("Sample data inserted for PNR: GHTW42, ABC123, XYZ789, DEF456, PQR999, GHR001, GHR002");
+print("Indexes created for sharding readiness");
+print("customer_bookings collection ready for fast customer queries");
+print("=====================================");

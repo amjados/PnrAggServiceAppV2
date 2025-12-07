@@ -1,0 +1,166 @@
+/* WebSocket Test Client Styles */
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    max-width: 1400px;
+    margin: 5px auto;
+    padding: 2px;
+    background: #f5f5f5;
+}
+
+.container {
+    background: white;
+    padding: 5px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.split-container {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.left-panel,
+.right-panel {
+    flex: 1;
+}
+
+h1 {
+    color: #333;
+    margin-top: 0;
+}
+
+.controls {
+    margin: 5px 0;
+}
+
+input {
+    width: 100%;
+    padding: 5px;
+    margin: 5px 0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+button {
+    background: #007acc;
+    color: white;
+    border: none;
+    padding: 5px 5px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-right: 5px;
+    font-size: 14px;
+}
+
+button:hover {
+    background: #005a9e;
+}
+
+button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+.status {
+    padding: 5px;
+    margin: 5px 0;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+.connected {
+    background: #d4edda;
+    color: #155724;
+}
+
+.disconnected {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.messages {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 5px;
+    height: 400px;
+    overflow-y: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+}
+
+.message {
+    margin: 5px 0;
+    padding: 5px;
+    background: white;
+    border-left: 3px solid #007acc;
+    border-radius: 3px;
+}
+
+.message.error {
+    border-left-color: #dc3545;
+    background: #fff5f5;
+}
+
+.timestamp {
+    color: #666;
+    font-size: 11px;
+}
+
+.instructions {
+    background: #e7f3ff;
+    padding: 5px;
+    border-radius: 4px;
+    margin: 5px 0;
+    border-left: 4px solid #007acc;
+}
+
+.instructions h3 {
+    margin-top: 0;
+    color: #007acc;
+}
+
+.api-controls {
+    margin: 5px 0;
+    padding: 5px;
+    background: #f8f9fa;
+    border-radius: 4px;
+}
+
+.result-box {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 5px;
+    margin-top: 5px;
+    min-height: 500px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.v2-badge {
+    display: inline-block;
+    background: #28a745;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: bold;
+    margin-left: 5px;
+}
+
+.v1-badge {
+    display: inline-block;
+    background: #6c757d;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: bold;
+    margin-left: 5px;
+}

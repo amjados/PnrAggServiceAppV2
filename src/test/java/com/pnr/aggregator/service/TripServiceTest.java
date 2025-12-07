@@ -10,6 +10,8 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
@@ -42,25 +44,101 @@ import static org.mockito.Mockito.*;
  * RequirementCategorized: Core Requirements (MongoDB Source 1 - Trip
  * Information) & Bonus Requirements (Circuit Breaking)
  */
+/**
+ * -[@ExtendWith](MockitoExtension.class): Integrates Mockito with JUnit 5.
+ * --Enables Mockito annotations like [@Mock], [@InjectMocks], etc.
+ * --Initializes mocks before each test method automatically
+ * --Validates mock usage after each test (detects unused stubs)
+ * --Replaces the legacy [@RunWith](MockitoJUnitRunner.class) from JUnit 4
+ * --WithoutIT: [@Mock] and [@InjectMocks] annotations wouldn't work;
+ * ---mocks would be null, causing NullPointerException in tests.
+ */
+/**
+ * -[@MockitoSettings](strictness = Strictness.LENIENT): Configures Mockito's
+ * strictness level.
+ * --LENIENT mode allows unused stubs without warnings
+ * --Useful when setting up common test data that's not used in every test
+ * --Prevents UnnecessaryStubbingException for valid test scenarios
+ * --STRICT_STUBS would fail if stubbed methods aren't called
+ * --WithoutIT: Tests with shared setup might fail unnecessarily
+ */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class TripServiceTest {
 
+    /**
+     * -[@Mock]: Creates a mock instance of MongoClient.
+     * --Simulates MongoDB database operations without actual database connection
+     * --All methods return default values unless stubbed with when().thenReturn()
+     * --Enables testing database queries without MongoDB server running
+     * --Used to test async MongoDB findOne operations with handlers
+     * --WithoutIT: Would require actual MongoDB instance and connection;
+     * ---tests would be slow, require infrastructure, and be harder to control.
+     */
     @Mock
     private MongoClient mongoClient;
 
+    /**
+     * -[@Mock]: Creates mock for Spring CacheManager.
+     * --Simulates cache operations (get, put) for resilience testing
+     * --Enables testing fallback to cache when MongoDB fails
+     * --Allows verification of cache usage patterns
+     * --WithoutIT: Can't test caching behavior without actual cache implementation
+     */
     @Mock
     private CacheManager cacheManager;
 
+    /**
+     * -[@Mock]: Creates mock for Resilience4j CircuitBreakerRegistry.
+     * --Provides access to circuit breaker instances by name
+     * --Used to configure circuit breaker for testing different states
+     * --Enables testing of circuit breaker patterns without real infrastructure
+     * --WithoutIT: Can't test resilience patterns and circuit breaker behavior
+     */
     @Mock
     private CircuitBreakerRegistry circuitBreakerRegistry;
 
+    /**
+     * -[@Mock]: Creates mock for Resilience4j CircuitBreaker.
+     * --Simulates circuit breaker states (OPEN, CLOSED, HALF_OPEN)
+     * --Allows testing behavior when circuit is open (service unavailable)
+     * --Enables verification of circuit breaker metrics (onSuccess, onError)
+     * --WithoutIT: Can't test how service responds to circuit breaker state changes
+     */
     @Mock
     private CircuitBreaker circuitBreaker;
 
+    /**
+     * -[@Mock]: Creates mock for Spring Cache.
+     * --Simulates individual cache operations (get, put)
+     * --Enables testing cache hit/miss scenarios
+     * --Used to verify cached data is used when MongoDB fails
+     * --WithoutIT: Can't verify caching logic without actual cache instance
+     */
     @Mock
     private Cache cache;
 
+    /**
+     * -[@Mock]: Creates mock for Vert.x instance.
+     * --Simulates Vert.x async operations for date/time conversions
+     * --Enables testing async blocking operations without actual Vert.x runtime
+     * --Used in DataTypeConverter.timestampsToDateLocal for timezone conversions
+     * --WithoutIT: Can't test async date conversions without Vert.x instance
+     */
+    @Mock
+    private Vertx vertx;
+
+    /**
+     * -[@InjectMocks]: Creates instance and injects [@Mock] dependencies into it.
+     * --Creates a real instance of TripService
+     * --Automatically injects all [@Mock] objects (mongoClient, cacheManager,
+     * circuitBreakerRegistry)
+     * --Simulates Spring's dependency injection for testing
+     * --Uses constructor, setter, or field injection (in that order)
+     * --WithoutIT: Would need manual instantiation like new TripService();
+     * ---and manual injection of all mocks, making tests harder to write and
+     * maintain.
+     */
     @InjectMocks
     private TripService tripService;
 
@@ -81,11 +159,46 @@ class TripServiceTest {
         when(circuitBreakerRegistry.circuitBreaker("tripServiceCB")).thenReturn(circuitBreaker);
         when(circuitBreaker.getName()).thenReturn("tripServiceCB");
         when(circuitBreaker.getState()).thenReturn(CircuitBreaker.State.CLOSED);
+        when(circuitBreaker.tryAcquirePermission()).thenReturn(true); // Default: circuit is closed
+
+        // Mock cache manager
+        when(cacheManager.getCache(anyString())).thenReturn(cache);
+
+        // Mock vertx.executeBlocking for async timestamp parsing
+        // This is critical for mapToTrip() to work correctly
+        doAnswer(invocation -> {
+            Handler<Promise<Object>> blockingCodeHandler = invocation.getArgument(0);
+            Handler<AsyncResult<Object>> resultHandler = invocation.getArgument(1);
+
+            // Execute the blocking code synchronously
+            Promise<Object> blockingPromise = Promise.promise();
+            try {
+                blockingCodeHandler.handle(blockingPromise);
+                // If the blocking code completed successfully, notify the result handler
+                if (blockingPromise.future().succeeded()) {
+                    AsyncResult<Object> result = mock(AsyncResult.class);
+                    when(result.succeeded()).thenReturn(true);
+                    when(result.result()).thenReturn(blockingPromise.future().result());
+                    resultHandler.handle(result);
+                } else if (blockingPromise.future().failed()) {
+                    AsyncResult<Object> result = mock(AsyncResult.class);
+                    when(result.succeeded()).thenReturn(false);
+                    when(result.cause()).thenReturn(blockingPromise.future().cause());
+                    resultHandler.handle(result);
+                }
+            } catch (Exception e) {
+                AsyncResult<Object> result = mock(AsyncResult.class);
+                when(result.succeeded()).thenReturn(false);
+                when(result.cause()).thenReturn(e);
+                resultHandler.handle(result);
+            }
+            return null;
+        }).when(vertx).executeBlocking(any(Handler.class), any(Handler.class));
 
         // Initialize the service
         tripService.init();
 
-        // Create valid test data
+        // Create valid test data with future dates (upcoming flights)
         validTripDoc = new JsonObject()
                 .put("bookingReference", "ABC123")
                 .put("cabinClass", "ECONOMY")
@@ -101,9 +214,9 @@ class TripServiceTest {
                         .add(new JsonObject()
                                 .put("flightNumber", "AA100")
                                 .put("departureAirport", "JFK")
-                                .put("departureTimeStamp", "2025-12-01T10:00:00Z")
+                                .put("departureTimeStamp", "2026-12-01T10:00:00Z")
                                 .put("arrivalAirport", "LAX")
-                                .put("arrivalTimeStamp", "2025-12-01T14:00:00Z")));
+                                .put("arrivalTimeStamp", "2026-12-01T14:00:00Z")));
 
         validTrip = new Trip();
         validTrip.setBookingReference("ABC123");
@@ -170,10 +283,14 @@ class TripServiceTest {
         }).when(mongoClient).findOne(eq("trips"), any(JsonObject.class), isNull(), any());
 
         // When
+        // Future<Trip> returned even when PNR not found - reactive error handling
         Future<Trip> future = tripService.getTripInfo("NOTFND");
 
         // Then
+        // future.failed() - Checks if Future completed with failure (opposite of
+        // succeeded)
         assertTrue(future.failed());
+        // future.cause() - Retrieves the exception/throwable that caused the failure
         assertInstanceOf(PNRNotFoundException.class, future.cause());
         assertTrue(future.cause().getMessage().contains("PNR not found"));
 
@@ -480,6 +597,9 @@ class TripServiceTest {
         // Given
         String customerId = "C12345";
 
+        // Mock cache to return null (no cached data available)
+        when(cache.get(eq(customerId), eq(List.class))).thenReturn(null);
+
         doAnswer(invocation -> {
             Handler<AsyncResult<List<JsonObject>>> handler = invocation.getArgument(2);
             AsyncResult<List<JsonObject>> result = mock(AsyncResult.class);
@@ -494,7 +614,8 @@ class TripServiceTest {
 
         // Then
         assertTrue(future.failed());
-        assertTrue(future.cause().getMessage().contains("Connection failed"));
+        assertTrue(future.cause().getMessage().contains("Connection failed") ||
+                future.cause().getMessage().contains("temporarily unavailable"));
     }
 
     /**

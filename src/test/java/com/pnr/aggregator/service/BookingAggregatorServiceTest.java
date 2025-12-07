@@ -9,6 +9,10 @@ import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
+import org.junit.jupiter.api.condition.DisabledIf;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
@@ -40,25 +44,97 @@ import static org.mockito.Mockito.*;
  * and data flow between multiple service components, even though dependencies
  * are mocked.
  */
+/**
+ * -[@ExtendWith](MockitoExtension.class): Integrates Mockito with JUnit 5.
+ * --Enables Mockito annotations like [@Mock], [@InjectMocks], etc.
+ * --Initializes mocks before each test method automatically
+ * --Validates mock usage after each test (detects unused stubs)
+ * --Replaces the legacy [@RunWith](MockitoJUnitRunner.class) from JUnit 4
+ * --WithoutIT: [@Mock] and [@InjectMocks] annotations wouldn't work;
+ * ---mocks would be null, causing NullPointerException in tests.
+ */
+/**
+ * -[@MockitoSettings](strictness = Strictness.LENIENT): Configures Mockito's
+ * strictness level.
+ * --LENIENT mode allows unused stubs without failing the test
+ * --Useful for component tests where not all mocked methods are called in every
+ * test
+ * --STRICT_STUBS (default) would fail if you stub methods that aren't called
+ * --Helps avoid "unnecessary stubbings" warnings in complex service
+ * orchestration tests
+ * --WithoutIT: Tests might fail with UnnecessaryStubbingException for valid
+ * test scenarios
+ */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class BookingAggregatorServiceTest {
 
+    /**
+     * -[@Mock]: Creates a mock instance of the specified type.
+     * --Creates a fake implementation of TripService
+     * --All methods return default values (null for objects, false for boolean)
+     * --Behavior must be defined using when().thenReturn() or similar
+     * --Used to isolate the aggregator from actual trip service implementation
+     * --WithoutIT: Would need manual mock creation with Mockito.mock();
+     * ---tests would be more verbose and harder to maintain.
+     */
     @Mock
     private TripService tripService;
 
+    /**
+     * -[@Mock]: Creates mock for BaggageService.
+     * --Simulates baggage allowance data retrieval
+     * --Enables testing of parallel composition with other services
+     * --Allows testing fallback scenarios (default baggage values)
+     * --WithoutIT: Can't test service orchestration without real BaggageService
+     * dependency
+     */
     @Mock
     private BaggageService baggageService;
 
+    /**
+     * -[@Mock]: Creates mock for TicketService.
+     * --Simulates ticket data retrieval for passengers
+     * --Enables testing partial failures (some tickets missing)
+     * --Supports testing of graceful degradation patterns
+     * --WithoutIT: Would require actual MongoDB connection and ticket service
+     * implementation
+     */
     @Mock
     private TicketService ticketService;
 
+    /**
+     * -[@Mock]: Creates mock for Vert.x instance.
+     * --Provides access to event bus for reactive messaging
+     * --Used to verify event publishing after successful aggregation
+     * --Enables testing async/reactive patterns without actual Vert.x runtime
+     * --WithoutIT: Can't test event-driven features without real Vert.x instance
+     */
     @Mock
     private Vertx vertx;
 
+    /**
+     * -[@Mock]: Creates mock for Vert.x EventBus.
+     * --Simulates reactive message publishing (pnr.fetched events)
+     * --Allows verification that events are published after booking aggregation
+     * --Supports testing of event-driven architecture patterns
+     * --WithoutIT: Can't verify event publishing behavior in tests
+     */
     @Mock
     private EventBus eventBus;
 
+    /**
+     * -[@InjectMocks]: Creates instance and injects [@Mock] dependencies into it.
+     * --Creates a real instance of BookingAggregatorService
+     * --Automatically injects all [@Mock] objects (trip, baggage, ticket services,
+     * vertx)
+     * --Simulates Spring's dependency injection for testing
+     * --Uses constructor, setter, or field injection (in that order)
+     * --WithoutIT: Would need manual instantiation like new
+     * BookingAggregatorService();
+     * ---and manual injection of all mocks, making tests harder to write and
+     * maintain.
+     */
     @InjectMocks
     private BookingAggregatorService aggregatorService;
 
@@ -152,16 +228,26 @@ class BookingAggregatorServiceTest {
     @Test
     void testAggregateBooking_Success_AllDataAvailable() {
         // Given
+        // Future.succeededFuture() - Creates already-completed successful Vert.x Future
+        // with value
         when(tripService.getTripInfo("ABC123")).thenReturn(Future.succeededFuture(validTrip));
         when(baggageService.getBaggageInfo("ABC123")).thenReturn(Future.succeededFuture(validBaggage));
         when(ticketService.getTicket("ABC123", 1)).thenReturn(Future.succeededFuture(validTicket));
+        // Future.succeededFuture(null) - Valid scenario for missing data (passenger
+        // without ticket)
         when(ticketService.getTicket("ABC123", 2)).thenReturn(Future.succeededFuture(null));
 
         // When
+        // Future<BookingResponse> - Result of parallel composition of multiple Futures
+        // (reactive aggregation)
         Future<BookingResponse> future = aggregatorService.aggregateBooking("ABC123");
 
         // Then
+        // future.succeeded() - Verifies all parallel Futures (trip, baggage, tickets)
+        // completed successfully
         assertTrue(future.succeeded());
+        // future.result() - Retrieves aggregated BookingResponse after all async
+        // operations complete
         BookingResponse response = future.result();
 
         assertEquals("ABC123", response.getPnr());
@@ -293,14 +379,20 @@ class BookingAggregatorServiceTest {
     @Test
     void testAggregateBooking_TripFailure() {
         // Given
+        // Future.failedFuture(exception) - Creates failed Future with specific
+        // exception
         when(tripService.getTripInfo("ABC123"))
                 .thenReturn(Future.failedFuture(new RuntimeException("MongoDB error")));
 
         // When
+        // Critical trip failure causes entire aggregation Future to fail (fail-fast
+        // pattern)
         Future<BookingResponse> future = aggregatorService.aggregateBooking("ABC123");
 
         // Then
+        // future.failed() is true when critical dependency (trip) fails
         assertTrue(future.failed());
+        // future.cause() propagates the original exception from failed trip service
         assertTrue(future.cause().getMessage().contains("MongoDB error"));
 
         // Verify other services not called (fail fast)
@@ -654,5 +746,214 @@ class BookingAggregatorServiceTest {
         // Then
         assertTrue(future.succeeded());
         assertEquals(5, future.result().size());
+    }
+
+    // ============================================================================
+    // CONDITIONAL TEST EXECUTION EXAMPLES
+    // ============================================================================
+
+    /**
+     * TestCategory: Conditional Test - Environment-Based
+     * Test Type: Positive Test - Performance/Load Testing
+     * 
+     * -[@EnabledIfEnvironmentVariable]: Runs test only if environment variable
+     * matches
+     * --Checks if ENV environment variable equals "production"
+     * --Useful for running performance tests only in production-like environments
+     * --Skip expensive tests in development environment
+     * 
+     * Input: PNR "ABC123" with valid data
+     * ExpectedOut: Succeeded Future with BookingResponse, test runs only in
+     * production ENV
+     * 
+     * Usage: Set environment variable before running tests:
+     * - Windows: $env:ENV="production"; mvn test
+     * - Linux/Mac: export ENV=production && mvn test
+     */
+    @Test
+    @EnabledIfEnvironmentVariable(named = "ENV", matches = "production")
+    void testAggregateBooking_PerformanceTest_ProductionOnly() {
+        // Given - Production-level performance test
+        when(tripService.getTripInfo("ABC123")).thenReturn(Future.succeededFuture(validTrip));
+        when(baggageService.getBaggageInfo("ABC123")).thenReturn(Future.succeededFuture(validBaggage));
+        when(ticketService.getTicket(eq("ABC123"), anyInt())).thenReturn(Future.succeededFuture(validTicket));
+
+        // When - Measure performance (only in production environment)
+        long startTime = System.currentTimeMillis();
+        Future<BookingResponse> future = aggregatorService.aggregateBooking("ABC123");
+        long duration = System.currentTimeMillis() - startTime;
+
+        // Then - Verify success and performance within acceptable range
+        assertTrue(future.succeeded());
+        assertTrue(duration < 1000, "Aggregation should complete within 1 second");
+    }
+
+    /**
+     * TestCategory: Conditional Test - System Property-Based
+     * Test Type: Integration Test - Database Connectivity
+     * 
+     * -[@EnabledIfSystemProperty]: Runs test only if system property matches
+     * --Checks if integration.tests system property equals "enabled"
+     * --Useful for separating unit tests from integration tests
+     * --Integration tests may require external services (DB, APIs)
+     * 
+     * Input: Customer ID "C12345" with database lookup
+     * ExpectedOut: Succeeded Future with multiple bookings, test runs only if
+     * integration.tests=enabled
+     * 
+     * Usage: Set system property when running tests:
+     * - Maven: mvn test -Dintegration.tests=enabled
+     * - IDE: Add VM argument: -Dintegration.tests=enabled
+     */
+    @Test
+    @EnabledIfSystemProperty(named = "integration.tests", matches = "enabled")
+    void testGetBookingsByCustomerId_IntegrationTest() {
+        // Given - Integration test with real database operations
+        Trip trip1 = new Trip();
+        trip1.setBookingReference("INT001");
+        trip1.setPassengers(validTrip.getPassengers());
+        trip1.setFlights(validTrip.getFlights());
+
+        when(tripService.getTripsByCustomerId("C12345"))
+                .thenReturn(Future.succeededFuture(List.of(trip1)));
+        when(tripService.getTripInfo("INT001")).thenReturn(Future.succeededFuture(trip1));
+        when(baggageService.getBaggageInfo(anyString())).thenReturn(Future.succeededFuture(validBaggage));
+        when(ticketService.getTicket(anyString(), anyInt())).thenReturn(Future.succeededFuture(validTicket));
+
+        // When
+        Future<List<BookingResponse>> future = aggregatorService.aggregateBookingByCustomerId("C12345");
+
+        // Then
+        assertTrue(future.succeeded());
+        assertFalse(future.result().isEmpty());
+    }
+
+    /**
+     * TestCategory: Conditional Test - Custom Method-Based
+     * Test Type: Negative Test - Circuit Breaker Simulation
+     * 
+     * -[@EnabledIf]: Runs test only if custom method returns true
+     * --Executes isCircuitBreakerTestEnabled() method to determine if test should
+     * run
+     * --Allows complex custom logic for conditional execution
+     * --Useful for feature flags, runtime checks, or environment detection
+     * 
+     * Input: PNR "ABC123" with simulated service failure
+     * ExpectedOut: Failed Future, test runs only if circuit breaker testing is
+     * enabled
+     * 
+     * Usage: Method returns true/false based on custom logic
+     */
+    @Test
+    @EnabledIf("isCircuitBreakerTestEnabled")
+    void testAggregateBooking_CircuitBreakerSimulation() {
+        // Given - Simulate circuit breaker open state
+        when(tripService.getTripInfo("ABC123"))
+                .thenReturn(Future.failedFuture(new RuntimeException("Circuit breaker open")));
+
+        // When
+        Future<BookingResponse> future = aggregatorService.aggregateBooking("ABC123");
+
+        // Then
+        assertTrue(future.failed());
+        assertTrue(future.cause().getMessage().contains("Circuit breaker"));
+    }
+
+    /**
+     * TestCategory: Conditional Test - Disabled Under Condition
+     * Test Type: Performance Test - Heavy Load
+     * 
+     * -[@DisabledIf]: Skips test if custom method returns true
+     * --Executes isRunningOnCI() method to check if running on CI/CD pipeline
+     * --Test runs locally but skipped on CI to avoid resource-intensive operations
+     * --Opposite of [@EnabledIf] - disables instead of enables
+     * 
+     * Input: Multiple parallel requests (100 concurrent bookings)
+     * ExpectedOut: All succeed, test skipped on CI to avoid timeout/resource issues
+     * 
+     * Usage: Method returns true to SKIP test, false to RUN test
+     */
+    @Test
+    @DisabledIf("isRunningOnCI")
+    void testAggregateBooking_HeavyLoadTest_SkipOnCI() {
+        // Given - Heavy load test with many parallel requests
+        when(tripService.getTripInfo(anyString())).thenReturn(Future.succeededFuture(validTrip));
+        when(baggageService.getBaggageInfo(anyString())).thenReturn(Future.succeededFuture(validBaggage));
+        when(ticketService.getTicket(anyString(), anyInt())).thenReturn(Future.succeededFuture(validTicket));
+
+        // When - Simulate 100 parallel requests
+        List<Future<BookingResponse>> futures = new ArrayList<>();
+        for (int i = 0; i < 100; i++) {
+            futures.add(aggregatorService.aggregateBooking("PNR" + i));
+        }
+
+        // Then - All should succeed (but test skipped on CI)
+        futures.forEach(f -> assertTrue(f.succeeded()));
+    }
+
+    /**
+     * TestCategory: Conditional Test - Java Version-Based
+     * Test Type: Feature Test - Java 17+ Features
+     * 
+     * -[@EnabledIfSystemProperty]: Runs test only on specific Java version
+     * --Checks java.version system property matches regex for Java 17+
+     * --Useful for testing features that require specific Java versions
+     * --Ensures compatibility tests run only on appropriate runtime
+     * 
+     * Input: PNR "ABC123" using Java 17+ features (pattern matching, records)
+     * ExpectedOut: Succeeded Future, test runs only on Java 17 or higher
+     */
+    @Test
+    @EnabledIfSystemProperty(named = "java.version", matches = "^(17|18|19|20|21).*")
+    void testAggregateBooking_Java17PlusFeatures() {
+        // Given - Test using Java 17+ features
+        when(tripService.getTripInfo("ABC123")).thenReturn(Future.succeededFuture(validTrip));
+        when(baggageService.getBaggageInfo("ABC123")).thenReturn(Future.succeededFuture(validBaggage));
+        when(ticketService.getTicket(eq("ABC123"), anyInt())).thenReturn(Future.failedFuture("Not found"));
+
+        // When
+        Future<BookingResponse> future = aggregatorService.aggregateBooking("ABC123");
+
+        // Then
+        assertTrue(future.succeeded());
+        assertNotNull(future.result());
+    }
+
+    // ============================================================================
+    // HELPER METHODS FOR CONDITIONAL TESTS
+    // ============================================================================
+
+    /**
+     * Helper method for [@EnabledIf] annotation
+     * Determines if circuit breaker tests should run
+     * 
+     * @return true if circuit breaker testing is enabled (via system property or
+     *         env var)
+     */
+    static boolean isCircuitBreakerTestEnabled() {
+        // Check system property
+        String sysProp = System.getProperty("circuitbreaker.test.enabled");
+        if ("true".equalsIgnoreCase(sysProp)) {
+            return true;
+        }
+
+        // Check environment variable
+        String envVar = System.getenv("CIRCUITBREAKER_TEST_ENABLED");
+        return "true".equalsIgnoreCase(envVar);
+    }
+
+    /**
+     * Helper method for [@DisabledIf] annotation
+     * Detects if tests are running on CI/CD pipeline
+     * 
+     * @return true if running on CI (to SKIP heavy tests), false for local
+     *         execution
+     */
+    static boolean isRunningOnCI() {
+        // Check common CI environment variables
+        return System.getenv("CI") != null ||
+                System.getenv("JENKINS_HOME") != null ||
+                System.getenv("GITHUB_ACTIONS") != null ||
+                System.getenv("GITLAB_CI") != null;
     }
 }

@@ -740,3 +740,294 @@ Customer "1099" appears in:
 - Exception Tests: 9 methods
 
 ---
+
+## TODO-TEST-2: Advanced JUnit 5 Test Types
+
+### Missing Advanced Test Types
+
+#### 1. @ParameterizedTest ⭐ (Most Important - **PARTIALLY IMPLEMENTED**)
+**Run the same test with multiple inputs using various data sources**
+
+**Available Annotations:**
+- `@ValueSource` - Simple values (strings, ints, booleans, etc.)
+- `@CsvSource` - CSV data with multiple parameters
+- `@MethodSource` - Complex objects from a method
+- `@EnumSource` - Test all enum values
+
+**✅ Implemented Example (CircuitBreakerIntegrationTest.java):**
+```java
+@ParameterizedTest
+@ValueSource(strings = {"GHTW42", "ABC123"})
+void testPhase1_MongoUp_ExpectSuccess(String pnr) {
+    // Test runs twice: once for GHTW42, once for ABC123
+}
+```
+
+**Use Cases for Your Project:**
+- ✅ **Circuit Breaker Tests**: Test multiple PNRs (`GHTW42`, `ABC123`) - IMPLEMENTED
+- ❌ Test multiple PNR formats (valid/invalid)
+- ❌ Test different HTTP status codes
+- ❌ Test various error messages
+- ❌ Test different cabin classes (ECONOMY, BUSINESS, FIRST)
+
+**Example Tests Needed:**
+```java
+// Test multiple cabin classes
+@ParameterizedTest
+@ValueSource(strings = {"ECONOMY", "BUSINESS", "FIRST"})
+void testGetBooking_DifferentCabinClasses(String cabinClass) {
+    validTrip.setCabinClass(cabinClass);
+    // Test logic...
+}
+
+// Test multiple parameters with CSV
+@ParameterizedTest
+@CsvSource({
+    "GHTW42, ECONOMY, 200",
+    "ABC123, BUSINESS, 200",
+    "INVALID, ECONOMY, 404"
+})
+void testGetBooking_VariousScenarios(String pnr, String cabin, int expectedStatus) {
+    // Test logic...
+}
+
+// Test with MethodSource for complex objects
+@ParameterizedTest
+@MethodSource("provideInvalidPnrs")
+void testGetBooking_InvalidPnrFormats(String pnr) {
+    // Test validation logic...
+}
+
+static Stream<String> provideInvalidPnrs() {
+    return Stream.of("", "A", "TOOLONG123", "ABC", "12345");
+}
+```
+
+---
+
+#### 2. @RepeatedTest ❌ (Not Implemented)
+**Run the same test multiple times to catch flaky behavior**
+
+**Use Cases:**
+- Test async operations for race conditions
+- Verify caching consistency
+- Test reactive Future completion reliability
+
+**Example Tests Needed:**
+```java
+@RepeatedTest(10)
+@DisplayName("Verify async aggregation stability (10 iterations)")
+void testAggregateBooking_AsyncStability() {
+    Future<BookingResponse> future = aggregatorService.aggregateBooking("GHTW42");
+    assertTrue(future.succeeded(), "Async operation should always succeed");
+}
+
+@RepeatedTest(value = 5, name = "Cache consistency test {currentRepetition}/{totalRepetitions}")
+void testCacheConsistency() {
+    // Test cache returns same data across multiple calls
+}
+```
+
+---
+
+#### 3. @TestFactory ❌ (Not Implemented)
+**Generate tests dynamically at runtime**
+
+**Use Cases:**
+- Test all PNRs from a data source
+- Generate tests for each passenger in booking
+- Test each flight in an itinerary
+
+**Example Tests Needed:**
+```java
+@TestFactory
+Stream<DynamicTest> testAllPnrsFromDatabase() {
+    List<String> pnrs = Arrays.asList("GHTW42", "ABC123", "XYZ789", "DEF456");
+    return pnrs.stream()
+        .map(pnr -> dynamicTest("Test PNR: " + pnr, () -> {
+            Future<BookingResponse> future = aggregatorService.aggregateBooking(pnr);
+            assertTrue(future.succeeded(), "PNR " + pnr + " should succeed");
+        }));
+}
+
+@TestFactory
+Collection<DynamicTest> testEachPassengerInBooking() {
+    // Generate test for each passenger dynamically
+}
+```
+
+---
+
+#### 4. @Nested ❌ (Not Implemented)
+**Organize tests in inner classes for better structure**
+
+**Use Cases:**
+- Group success vs. error tests
+- Separate validation vs. integration tests
+- Organize by feature (trip, baggage, ticket)
+
+**Example Tests Needed:**
+```java
+class BookingAggregatorServiceTest {
+    
+    @Nested
+    @DisplayName("Success Scenarios")
+    class SuccessTests {
+        @Test void testFullDataAvailable() { }
+        @Test void testPartialData() { }
+    }
+    
+    @Nested
+    @DisplayName("Error Scenarios")
+    class ErrorTests {
+        @Test void testMongoDbDown() { }
+        @Test void testServiceUnavailable() { }
+    }
+    
+    @Nested
+    @DisplayName("Fallback Scenarios")
+    class FallbackTests {
+        @Test void testCachedData() { }
+        @Test void testDefaultBaggage() { }
+    }
+}
+```
+
+---
+
+#### 5. @Timeout ❌ (Not Implemented)
+**Enforce maximum execution time for tests**
+
+**Use Cases:**
+- Test async operations complete quickly
+- Verify circuit breaker timeout
+- Test performance requirements
+
+**Example Tests Needed:**
+```java
+@Test
+@Timeout(value = 2, unit = TimeUnit.SECONDS)
+void testAggregateBooking_FastResponse() {
+    Future<BookingResponse> future = aggregatorService.aggregateBooking("GHTW42");
+    assertTrue(future.succeeded(), "Should complete within 2 seconds");
+}
+
+@Test
+@Timeout(value = 500, unit = TimeUnit.MILLISECONDS)
+void testCircuitBreaker_FastFallback() {
+    // Verify degraded response < 500ms when circuit is open
+}
+```
+
+---
+
+#### 6. @TestMethodOrder / @Order ✅ (IMPLEMENTED)
+**Control test execution order**
+
+**✅ Implemented In: CircuitBreakerIntegrationTest.java**
+```java
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+class CircuitBreakerIntegrationTest {
+    @Test @Order(1) void testPhase1_MongoUp() { }
+    @Test @Order(2) void testPhase2_MongoDown() { }
+    @Test @Order(3) void testPhase3_Recovery() { }
+}
+```
+
+**Use Cases:**
+- ✅ Integration tests with dependencies (Circuit Breaker phases) - IMPLEMENTED
+- Setup → Test → Cleanup sequences
+
+---
+
+#### 7. @TestInstance(Lifecycle.PER_CLASS) ✅ (IMPLEMENTED)
+**Share state across all tests in a class**
+
+**✅ Implemented In: CircuitBreakerIntegrationTest.java**
+```java
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+class CircuitBreakerIntegrationTest {
+    private List<BookingResponse> testResults; // Shared across all tests
+    
+    @BeforeAll
+    void setUpAll() {
+        testResults = new ArrayList<>();
+    }
+}
+```
+
+---
+
+### Summary: Test Type Implementation Status
+
+| Test Type | Status | Use Case | Priority |
+|-----------|--------|----------|----------|
+| `@Test` | ✅ Yes | Standard tests | - |
+| `@BeforeEach` | ✅ Yes | Setup per test | - |
+| `@ExtendWith` | ✅ Yes | Mockito integration | - |
+| `@EnabledIf/DisabledIf` | ✅ Yes | Conditional execution | - |
+| `@ParameterizedTest` | 🟡 Partial | Multiple inputs | ⭐ High |
+| `@RepeatedTest` | ❌ Missing | Stability testing | ⭐ High |
+| `@TestFactory` | ❌ Missing | Dynamic tests | Medium |
+| `@Nested` | ❌ Missing | Test organization | ⭐ High |
+| `@Timeout` | ❌ Missing | Performance limits | ⭐ High |
+| `@TestMethodOrder` | ✅ Yes | Execution order | - |
+| `@TestInstance` | ✅ Yes | Shared state | - |
+| `@Disabled` | ❌ Missing | Skip tests | Low |
+
+**Legend:**
+- ✅ Fully Implemented
+- 🟡 Partially Implemented
+- ❌ Not Implemented
+- ⭐ High Priority for Implementation
+
+---
+
+### Most Valuable for This Project (Priority Order)
+
+1. **@ParameterizedTest** ⭐⭐⭐
+   - Test multiple PNRs, cabin classes, error scenarios
+   - Already started with Circuit Breaker tests
+   - Expand to controller and service tests
+
+2. **@Nested** ⭐⭐⭐
+   - Better organize your 87+ test methods
+   - Group success/error/fallback scenarios
+   - Improve test readability and maintainability
+
+3. **@RepeatedTest** ⭐⭐
+   - Test async/reactive reliability
+   - Verify Vert.x Future consistency
+   - Catch flaky test behavior
+
+4. **@Timeout** ⭐⭐
+   - Ensure performance SLAs (< 1s for degraded responses)
+   - Validate circuit breaker fast-fail
+   - Test async operation timeouts
+
+---
+
+### Implementation Checklist
+
+**Phase 1: Expand Parameterized Tests** (High Priority)
+- [ ] Add `@ParameterizedTest` to `BookingControllerTest` for multiple PNRs
+- [ ] Add `@CsvSource` tests for cabin classes (ECONOMY, BUSINESS, FIRST)
+- [ ] Add `@MethodSource` tests for invalid PNR formats
+- [ ] Add `@EnumSource` tests if enum values exist (e.g., BookingStatus)
+
+**Phase 2: Add Test Organization** (High Priority)
+- [ ] Refactor `BookingAggregatorServiceTest` with `@Nested` classes
+- [ ] Organize success/error/fallback scenarios
+- [ ] Group trip/baggage/ticket feature tests
+
+**Phase 3: Add Reliability Tests** (Medium Priority)
+- [ ] Add `@RepeatedTest` for async operations
+- [ ] Add `@Timeout` for performance-critical tests
+- [ ] Test cache consistency with repeated calls
+
+**Phase 4: Dynamic Test Generation** (Low Priority)
+- [ ] Add `@TestFactory` for all PNRs from test data
+- [ ] Generate passenger tests dynamically
+- [ ] Generate flight itinerary tests
+
+---

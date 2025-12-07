@@ -31,12 +31,39 @@ import static org.mockito.Mockito.*;
  * RequirementCategorized: Bonus Requirements (Customer ID Endpoint - Hide data
  * in path param)
  */
+/**
+ * -[@ExtendWith](MockitoExtension.class): Integrates Mockito with JUnit 5.
+ * --Enables Mockito annotations like [@Mock], [@InjectMocks], etc.
+ * --Initializes mocks before each test method automatically
+ * --Validates mock usage after each test (detects unused stubs)
+ * --Replaces the legacy [@RunWith](MockitoJUnitRunner.class) from JUnit 4
+ * --WithoutIT: [@Mock] and [@InjectMocks] annotations wouldn't work;
+ * ---mocks would be null, causing NullPointerException in tests.
+ */
 @ExtendWith(MockitoExtension.class)
 class CustomerIdEndpointTest {
 
+    /**
+     * -[@Mock]: Creates a mock instance of BookingAggregatorService.
+     * --Simulates service layer for customer ID searches
+     * --Returns list of BookingResponse objects for a customer
+     * --Enables testing controller logic without actual service implementation
+     * --Used to test multiple bookings per customer scenario
+     * --WithoutIT: Would need full service layer with all dependencies;
+     * ---tests would be slower and harder to isolate controller logic.
+     */
     @Mock
     private BookingAggregatorService aggregatorService;
 
+    /**
+     * -[@InjectMocks]: Creates instance and injects [@Mock] dependencies into it.
+     * --Creates a real instance of BookingController
+     * --Automatically injects [@Mock] aggregatorService into it
+     * --Simulates Spring's dependency injection for testing
+     * --Uses constructor, setter, or field injection (in that order)
+     * --WithoutIT: Would need manual instantiation like new BookingController();
+     * ---and manual injection of mocks, making tests harder to write.
+     */
     @InjectMocks
     private BookingController bookingController;
 
@@ -86,6 +113,9 @@ class CustomerIdEndpointTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertInstanceOf(Map.class, response.getBody());
 
+        // @SuppressWarnings("unchecked") - Standard suppression for generic Map casting
+        // Type erasure prevents compile-time verification of <String, Object>
+        // parameters
         @SuppressWarnings("unchecked")
         Map<String, Object> responseBody = (Map<String, Object>) response.getBody();
 
@@ -151,6 +181,8 @@ class CustomerIdEndpointTest {
 
         assertEquals(HttpStatus.SERVICE_UNAVAILABLE, response.getStatusCode());
 
+        // @SuppressWarnings("unchecked") - Suppresses unchecked cast warning
+        // Casting Object from getBody() to generic Map type requires suppression
         @SuppressWarnings("unchecked")
         Map<String, Object> errorBody = (Map<String, Object>) response.getBody();
 
@@ -178,6 +210,8 @@ class CustomerIdEndpointTest {
 
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
 
+        // @SuppressWarnings("unchecked") - Necessary for generic type casting
+        // Type parameters <String, Object> are erased at runtime, can't be verified
         @SuppressWarnings("unchecked")
         Map<String, Object> errorBody = (Map<String, Object>) response.getBody();
 

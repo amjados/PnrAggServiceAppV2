@@ -30,18 +30,59 @@ import static org.mockito.Mockito.*;
  * RequirementCategorized: Core Requirements (MongoDB Source 3 - ETicket
  * Information) & Bonus Requirements (Circuit Breaking)
  */
+/**
+ * -[@ExtendWith](MockitoExtension.class): Integrates Mockito with JUnit 5.
+ * --Enables Mockito annotations like [@Mock], [@InjectMocks], etc.
+ * --Initializes mocks before each test method automatically
+ * --Validates mock usage after each test (detects unused stubs)
+ * --Replaces the legacy [@RunWith](MockitoJUnitRunner.class) from JUnit 4
+ * --WithoutIT: [@Mock] and [@InjectMocks] annotations wouldn't work;
+ * ---mocks would be null, causing NullPointerException in tests.
+ */
 @ExtendWith(MockitoExtension.class)
 class TicketServiceTest {
 
+    /**
+     * -[@Mock]: Creates a mock instance of MongoClient.
+     * --Simulates MongoDB operations for ticket collection
+     * --Enables testing ticket retrieval without actual database
+     * --Allows testing missing ticket scenarios (returns null)
+     * --Used to test async MongoDB operations with handlers
+     * --WithoutIT: Would require actual MongoDB connection and test data setup
+     */
     @Mock
     private MongoClient mongoClient;
 
+    /**
+     * -[@Mock]: Creates mock for CircuitBreakerRegistry.
+     * --Provides circuit breaker instances for resilience testing
+     * --Enables testing of circuit breaker integration
+     * --Allows configuration of circuit breaker behavior in tests
+     * --WithoutIT: Can't test circuit breaker patterns without registry
+     */
     @Mock
     private CircuitBreakerRegistry circuitBreakerRegistry;
 
+    /**
+     * -[@Mock]: Creates mock for CircuitBreaker.
+     * --Simulates circuit breaker state management
+     * --Enables testing behavior when circuit is open/closed
+     * --Allows verification of onSuccess/onError calls
+     * --Important: Missing tickets count as SUCCESS (valid business scenario)
+     * --WithoutIT: Can't test resilience patterns and failure handling
+     */
     @Mock
     private CircuitBreaker circuitBreaker;
 
+    /**
+     * -[@InjectMocks]: Creates instance and injects [@Mock] dependencies into it.
+     * --Creates a real instance of TicketService
+     * --Automatically injects [@Mock] objects (mongoClient, circuitBreakerRegistry)
+     * --Simulates Spring's dependency injection for testing
+     * --Uses constructor, setter, or field injection (in that order)
+     * --WithoutIT: Would need manual instantiation like new TicketService();
+     * ---and manual injection of mocks, making tests harder to write.
+     */
     @InjectMocks
     private TicketService ticketService;
 
@@ -127,10 +168,14 @@ class TicketServiceTest {
         }).when(mongoClient).findOne(eq("tickets"), any(JsonObject.class), isNull(), any());
 
         // When
+        // Future represents ticket lookup that will fail (ticket doesn't exist)
         Future<Ticket> future = ticketService.getTicket("ABC123", 1);
 
         // Then - Missing ticket is not a circuit breaker failure
+        // future.failed() is true when ticket not found (valid business scenario, not
+        // error)
         assertTrue(future.failed());
+        // future.cause() contains descriptive message about missing ticket
         assertTrue(future.cause().getMessage().contains("not found"));
 
         // Circuit breaker counts this as success (valid business scenario)
